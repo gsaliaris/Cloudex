@@ -63,8 +63,8 @@
   .snow-band{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;transition:.16s}
   .snow-band:hover{color:var(--ink);border-color:var(--ink-faint)}
   .snow-band.on{color:#fff;background:var(--accent);border-color:var(--accent);font-weight:700}
-  .snow-demo,.snow-note{font-size:9.5px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em;margin-left:auto}
-  .snow-note{max-width:40ch;text-align:right}
+  .snow-note{font-size:9.5px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em;margin-left:auto;max-width:40ch;text-align:right}
+  .snow-note a{color:inherit}
   @media(max-width:560px){.snow-temp{font-size:38px}.snow-note{margin-left:0;text-align:left}}
 
   /* Spotting outlook */
@@ -309,6 +309,7 @@
 
   <footer>
     Classification follows the World Meteorological Organization’s ten cloud genera plus a handful of rare and high-atmosphere forms. On a phone, the capture button opens your camera; on a laptop it opens a file picker. Photos are downscaled and stored locally in this browser.
+    Live conditions come from the <a href="https://www.weather.gov/" target="_blank" rel="noopener">National Weather Service</a> (US stations) and <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a> (worldwide, CC BY 4.0); when neither can be reached, sample conditions are shown.
   </footer>
 </div>
 
@@ -805,28 +806,26 @@ function renderZoo(){
   });
 }
 
-/* ---------- sky now (TWC current conditions) ----------
-   GOING LIVE: point WEATHER.endpoint at a small backend proxy that holds your TWC
-   apiKey and calls, server-side:
-     GET https://api.weather.com/v3/wx/observations/current
-         ?geocode=LAT,LON&units=e&format=json&apiKey=YOUR_KEY
-   returning the raw TWC JSON. Two reasons it must be a proxy, not a direct browser fetch:
-   (1) api.weather.com does not send CORS headers for arbitrary web origins, and
-   (2) the apiKey must never ship in client code. Field names below follow the
-   Standard package (references/standard.md) — confirm against your contract. */
-const WEATHER={ mode:'demo', endpoint:'', units:'e' };  // mode: 'demo' | 'live'
+/* ---------- live weather: NWS observations (US) + Open-Meteo (worldwide) ----------
+   Both APIs are free, keyless and CORS-enabled, so the page calls them directly.
+   NWS supplies the observed cloud layers (and so a real ceiling) for US locations;
+   Open-Meteo supplies low/mid/high cloud cover, current conditions outside the US,
+   and the hourly outlook. If both fail, the sample data below is shown instead. */
+const WEATHER={units:'e'};  // 'e' = °F, 'm' = °C
+const DEFAULT_SPOT={lat:33.749,lon:-84.388};
+const NWS='https://api.weather.gov', OPEN_METEO='https://api.open-meteo.com/v1/forecast';
+const CACHE_MS=10*60e3, FETCH_MS=8000, M_TO_FT=3.28084;
+const wxCache=new Map();
 
-function mapTWC(obs){
-  return {
-    phrase: obs.cloudCoverPhrase || obs.wxPhraseShort || obs.wxPhraseLong || '—',
-    conditions: obs.wxPhraseLong || obs.wxPhraseShort || '',
-    temp: obs.temperature, feels: obs.temperatureFeelsLike,
-    ceiling: obs.cloudCeiling,          // ft when units=e; null = clear / unlimited
-    humidity: obs.relativeHumidity,
-    day: (obs.dayOrNight || 'D') === 'D',
-    units: WEATHER.units,
-  };
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function getJSON(url){
+  const ctl=new AbortController(); const t=setTimeout(()=>ctl.abort(),FETCH_MS);
+  try{const r=await fetch(url,{signal:ctl.signal}); if(!r.ok) throw new Error(`${r.status} ${url}`); return await r.json();}
+  finally{clearTimeout(t);}
 }
+const cToUnits=c=>c==null?null:(WEATHER.units==='m'?c:c*9/5+32);
+const roundFt=m=>Math.round(m*M_TO_FT/100)*100;
+
 function getCoords(){
   if(!('geolocation' in navigator)) return Promise.resolve(null);
   return new Promise(res=>{
@@ -837,6 +836,96 @@ function getCoords(){
       ()=>{clearTimeout(t);fin(null);}, {timeout:6000,maximumAge:600000});
   });
 }
+
+/* NWS: /points -> nearby stations -> latest observation. US only (404 elsewhere). */
+async function fetchNWS({lat,lon}){
+  const pt=await getJSON(`${NWS}/points/${lat.toFixed(4)},${lon.toFixed(4)}`);
+  const rel=pt.properties.relativeLocation?.properties;
+  const place=rel?`${rel.city}, ${rel.state}`:null;
+  const st=await getJSON(pt.properties.observationStations);
+  for(const f of (st.features||[]).slice(0,3)){
+    const id=f.properties.stationIdentifier;
+    try{
+      const o=(await getJSON(`${NWS}/stations/${id}/observations/latest`)).properties;
+      if(o.temperature?.value==null || Date.now()-new Date(o.timestamp)>2*3600e3) continue;
+      return {place,station:id,obs:o};
+    }catch(e){}
+  }
+  return {place,station:null,obs:null};
+}
+const LAYER_WORD={FEW:'Few clouds',SCT:'Scattered',BKN:'Broken',OVC:'Overcast',VV:'Obscured'};
+function nwsCeiling(layers){
+  const bases=layers.filter(l=>['BKN','OVC','VV'].includes(l.amount)&&l.base?.value!=null).map(l=>l.base.value);
+  return bases.length?roundFt(Math.min(...bases)):null;
+}
+function describeNWSLayers(layers){
+  const ls=(layers||[]).filter(l=>LAYER_WORD[l.amount]&&l.base?.value!=null);
+  if(ls.length) return ls.map((l,i)=>`${i?LAYER_WORD[l.amount].toLowerCase():LAYER_WORD[l.amount]} at ${roundFt(l.base.value).toLocaleString()} ft`).join(' · ')+'.';
+  // automated stations only see up to 12,000 ft, so "clear" says nothing about cirrus
+  return (layers||[]).some(l=>l.amount==='CLR'||l.amount==='SKC')?'No cloud below 12,000 ft — scan higher for cirrus.':'';
+}
+
+/* Open-Meteo: current conditions + hourly forecast in one call, worldwide. */
+const OM_VARS='cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high,temperature_2m,is_day';
+function fetchOpenMeteo({lat,lon}){
+  const q=new URLSearchParams({latitude:lat.toFixed(4),longitude:lon.toFixed(4),
+    current:OM_VARS+',apparent_temperature,relative_humidity_2m,weather_code',
+    hourly:OM_VARS+',precipitation_probability',
+    temperature_unit:WEATHER.units==='m'?'celsius':'fahrenheit',
+    timezone:'auto',timeformat:'unixtime',forecast_days:'3'});
+  return getJSON(`${OPEN_METEO}?${q}`);
+}
+function wmoPhrase(code){
+  if(code==null) return null;
+  if(code===0) return 'Clear'; if(code===1) return 'Mainly Clear'; if(code===2) return 'Partly Cloudy'; if(code===3) return 'Overcast';
+  if(code===45||code===48) return 'Fog'; if(code<=57) return 'Drizzle'; if(code<=67) return 'Rain'; if(code<=77) return 'Snow';
+  if(code<=82) return 'Rain Showers'; if(code<=86) return 'Snow Showers'; return 'Thunderstorm';
+}
+function describeLayers(L){
+  const parts=[['low',L.low],['mid',L.mid],['high',L.high]].filter(([,v])=>v>=10);
+  return parts.length?'Cloud by layer: '+parts.map(([k,v])=>`${k} ${Math.round(v)}%`).join(' · ')+'.':'Barely a cloud at any level.';
+}
+function omPeriods(om){
+  const h=om.hourly, t=h?.time||[];
+  const i0=t.findIndex(x=>x>Date.now()/1000-1800); if(i0<0) return null;
+  return OFFSETS.map(off=>{const i=Math.min(i0+off,t.length-1);
+    return {when:new Date(t[i]*1000),cover:h.cloud_cover[i]??0,precip:h.precipitation_probability?.[i]??0,temp:h.temperature_2m[i],day:h.is_day[i]===1};});
+}
+
+/* Merge both sources into the shape renderSkyNow expects. ceiling: number (ft),
+   null (no ceiling = unlimited) or undefined (source can't tell -> show cover). */
+function buildNow(nws,om){
+  const o=nws?.obs, c=om?.current;
+  if(!o&&!c) return null;
+  const h=new Date().getHours();
+  const w={units:WEATHER.units, cover:c?.cloud_cover, day:c?c.is_day===1:(h>=6&&h<20),
+    layers:c?{low:c.cloud_cover_low,mid:c.cloud_cover_mid,high:c.cloud_cover_high}:null};
+  if(o){
+    w.phrase=o.textDescription||wmoPhrase(c?.weather_code)||'—';
+    w.conditions=describeNWSLayers(o.cloudLayers)||(w.layers?describeLayers(w.layers):'');
+    w.temp=cToUnits(o.temperature.value);
+    w.feels=cToUnits(o.heatIndex?.value??o.windChill?.value)??c?.apparent_temperature??w.temp;
+    w.humidity=o.relativeHumidity?.value!=null?Math.round(o.relativeHumidity.value):c?.relative_humidity_2m;
+    w.ceiling=o.cloudLayers?.length?nwsCeiling(o.cloudLayers):undefined;
+    w.station=nws.station; w.observed=new Date(o.timestamp);
+  }else{
+    w.phrase=wmoPhrase(c.weather_code)||'—'; w.conditions=describeLayers(w.layers);
+    w.temp=c.temperature_2m; w.feels=c.apparent_temperature; w.humidity=c.relative_humidity_2m;
+  }
+  w.storm=/thunder/i.test(w.phrase)||c?.weather_code>=95;
+  w.live=true;
+  return w;
+}
+async function loadSky(coords){
+  const key=`${coords.lat.toFixed(2)},${coords.lon.toFixed(2)}`;
+  const hit=wxCache.get(key); if(hit&&Date.now()-hit.at<CACHE_MS) return hit.data;
+  const [n,m]=await Promise.allSettled([fetchNWS(coords),fetchOpenMeteo(coords)]);
+  const nws=n.status==='fulfilled'?n.value:null, om=m.status==='fulfilled'?m.value:null;
+  const data={place:nws?.place||null, now:buildNow(nws,om), periods:om?omPeriods(om):null};
+  if(data.now||data.periods) wxCache.set(key,{at:Date.now(),data});
+  return data;
+}
+
 function demoWeather(coords){
   const h=new Date().getHours(); const day=h>=6&&h<20;
   const presets=[
@@ -848,17 +937,6 @@ function demoWeather(coords){
   const i=coords? Math.abs(Math.round(coords.lat+coords.lon))%presets.length : (day?0:1);
   return presets[i];
 }
-async function loadWeather(coords){
-  if(WEATHER.mode==='live' && WEATHER.endpoint){
-    try{
-      const u=`${WEATHER.endpoint}?geocode=${coords.lat},${coords.lon}&units=${WEATHER.units}&format=json`;
-      const r=await fetch(u); const j=await r.json();
-      const obs=Array.isArray(j)?j[0]:(j.observation||j);
-      return mapTWC(obs);
-    }catch(e){ /* fall through to demo */ }
-  }
-  return demoWeather(coords);
-}
 function bandsForCeiling(w){
   if(w.ceiling==null && /clear|fair|sunny/i.test(w.phrase)) return ['high'];
   if(w.ceiling==null) return ['high','mid'];
@@ -866,61 +944,81 @@ function bandsForCeiling(w){
   if(w.ceiling<=20000) return ['mid','low'];
   return ['high'];
 }
-function renderSkyNow(place,w,coords,note){
+function bandsForSky(w){
+  if(!w.layers) return bandsForCeiling(w);
+  const out=new Set(['low','mid','high'].filter(k=>w.layers[k]>=20));
+  if(typeof w.ceiling==='number') bandsForCeiling(w).forEach(b=>out.add(b));
+  if(w.storm) out.add('vert');
+  return [...out];
+}
+function sourceLine(w){
+  const om='<a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>';
+  if(!w.live) return 'Sample conditions · live weather unavailable';
+  if(!w.station) return `Weather data by ${om}`;
+  const min=Math.max(1,Math.round((Date.now()-w.observed)/60000));
+  return `NWS station ${esc(w.station)} · ${min<60?min+' min':Math.round(min/60)+' h'} ago · cloud layers by ${om}`;
+}
+function renderSkyNow(place,w,{mine=false,note=null}={}){
   const el=document.getElementById('skyNow');
-  const likely=bandsForCeiling(w);
+  const likely=bandsForSky(w);
   const u=w.units==='m'?'°C':'°F';
-  const ceil = w.ceiling==null ? 'Unlimited' : `${Number(w.ceiling).toLocaleString()} ft`;
+  const coverStat = w.ceiling===undefined
+    ? `<div><span>Cloud cover</span><b>${w.cover!=null?Math.round(w.cover)+'%':'—'}</b></div>`
+    : `<div><span>Cloud ceiling</span><b>${w.ceiling==null?'Unlimited':Number(w.ceiling).toLocaleString()+' ft'}</b></div>`;
   const chips=BAND_ORDER.map(c=>`<span class="snow-band${likely.includes(c)?' on':''}" data-band="${c}" style="--accent:${CLASSES[c].hex}" role="button" tabindex="0">${CLASSES[c].label}</span>`).join('');
-  const tail = note ? `<span class="snow-note">${note}</span>`
-    : (WEATHER.mode==='demo' ? '<span class="snow-demo">sample conditions · wire a TWC proxy for live data</span>' : '');
   el.innerHTML=`
     <div class="snow-main">
       <div class="snow-left">
-        <div class="snow-place">${place} <button id="locBtn" class="snow-loc">📍 ${coords?'Update':'Use my location'}</button></div>
-        <div class="snow-now"><span class="snow-temp">${w.temp!=null?Math.round(w.temp)+u:'—'}</span><span class="snow-phrase">${w.phrase}</span></div>
-        <div class="snow-cond">${w.conditions||''}</div>
+        <div class="snow-place">${esc(place)} <button id="locBtn" class="snow-loc">📍 ${mine?'Update':'Use my location'}</button></div>
+        <div class="snow-now"><span class="snow-temp">${w.temp!=null?Math.round(w.temp)+u:'—'}</span><span class="snow-phrase">${esc(w.phrase)}</span></div>
+        <div class="snow-cond">${esc(w.conditions)}</div>
       </div>
       <div class="snow-stats">
-        <div><span>Cloud ceiling</span><b>${ceil}</b></div>
+        ${coverStat}
         <div><span>Feels like</span><b>${w.feels!=null?Math.round(w.feels)+u:'—'}</b></div>
-        <div><span>Humidity</span><b>${w.humidity!=null?w.humidity+'%':'—'}</b></div>
+        <div><span>Humidity</span><b>${w.humidity!=null?Math.round(w.humidity)+'%':'—'}</b></div>
         <div><span>Sky</span><b>${w.day?'Daylight':'Night'}</b></div>
       </div>
     </div>
     <div class="snow-outlook">
       <span class="snow-ol-lab">Likely overhead now</span>
       <div class="snow-bandrow">${chips}</div>
-      ${tail}
+      <span class="snow-note">${[note,sourceLine(w)].filter(Boolean).join('<br>')}</span>
     </div>`;
   el.querySelectorAll('.snow-band').forEach(b=>{
     const go=()=>{const s=document.getElementById('band-'+b.dataset.band); if(s) s.scrollIntoView({behavior:'smooth',block:'start'});};
     b.addEventListener('click',go);
     b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
   });
-  const lb=document.getElementById('locBtn'); if(lb) lb.addEventListener('click',useMyLocation);
+  document.getElementById('locBtn').addEventListener('click',useMyLocation);
+}
+let skySeq=0;
+async function showSky(coords,mine,note){
+  const seq=++skySeq;
+  const el=document.getElementById('skyNow'); el.classList.add('loading');
+  const data=await loadSky(coords);
+  if(seq!==skySeq) return;  // a newer request superseded this one
+  el.classList.remove('loading');
+  const place=data.place||(mine?`${coords.lat.toFixed(2)}, ${coords.lon.toFixed(2)}`:'Atlanta, GA');
+  if(data.now) renderSkyNow(place,data.now,{mine,note});
+  else renderSkyNow('Sample sky',demoWeather(mine?coords:null),{mine,note});
+  buildOutlook(data.periods,coords);
 }
 async function useMyLocation(){
   const el=document.getElementById('skyNow'); el.classList.add('loading');
-  const coords=await getCoords(); el.classList.remove('loading');
-  if(!coords){
-    renderSkyNow('Sample sky', await loadWeather({lat:33.74,lon:-84.39}), null,
-      'Location access is blocked in this preview — works once embedded with location permission.');
-    return;
-  }
-  renderSkyNow(`${coords.lat.toFixed(2)}, ${coords.lon.toFixed(2)}`, await loadWeather(coords), coords, null);
-  buildOutlook(coords);
+  const coords=await getCoords();
+  if(!coords){ await showSky(DEFAULT_SPOT,false,'Location access is blocked, so this shows Atlanta. Allow location for this page to see your own sky.'); return; }
+  await showSky(coords,true,null);
 }
-function bootSkyNow(){ renderSkyNow('Sample sky', demoWeather(null), null, null); }
+async function bootWeather(){
+  renderSkyNow('Sample sky',demoWeather(null)); buildOutlook(null,null);
+  let granted=false;
+  try{granted=(await navigator.permissions.query({name:'geolocation'})).state==='granted';}catch(e){}
+  const coords=granted?await getCoords():null;
+  await showSky(coords||DEFAULT_SPOT,!!coords,null);
+}
 
-/* ---------- spotting outlook (TWC hourly forecast, 48h) ----------
-   GOING LIVE: set WEATHER.forecastEndpoint to a proxy that calls, server-side:
-     GET https://api.weather.com/v3/wx/forecast/hourly/2day
-         ?geocode=LAT,LON&units=e&format=json&apiKey=YOUR_KEY
-   TWC hourly responses are COLUMNAR — parallel arrays indexed by hour
-   (cloudCover[], precipChance[], temperature[], dayOrNight[], validTimeLocal[]).
-   We sample five day-part windows from those arrays. Confirm field names against
-   references/standard.md for your contract. */
+/* ---------- spotting outlook (Open-Meteo hourly, next 48h) ---------- */
 function presetIndex(coords){const h=new Date().getHours();const day=h>=6&&h<20;return coords?Math.abs(Math.round(coords.lat+coords.lon))%4:(day?0:1);}
 const OFFSETS=[2,6,11,20,27]; // hours from now
 
@@ -944,24 +1042,6 @@ function demoForecast(coords){
     return {when,cover,precip,day:h>=6&&h<20,temp:Math.round(baseTemp+(h>=11&&h<18?4:-3)-k)};
   });
 }
-async function loadForecast(coords){
-  if(WEATHER.mode==='live' && WEATHER.forecastEndpoint){
-    try{
-      const u=`${WEATHER.forecastEndpoint}?geocode=${coords.lat},${coords.lon}&units=${WEATHER.units}&format=json`;
-      const r=await fetch(u); const j=await r.json();
-      const cover=j.cloudCover||[], precip=j.precipChance||[], temp=j.temperature||[],
-            don=j.dayOrNight||[], times=j.validTimeLocal||[];
-      if(cover.length){
-        return OFFSETS.map(off=>{
-          const idx=Math.min(off,cover.length-1);
-          const when=times[idx]?new Date(times[idx]):new Date(Date.now()+off*3600e3);
-          return {when,cover:cover[idx]??0,precip:precip[idx]??0,temp:temp[idx],day:(don[idx]||'D')==='D'};
-        });
-      }
-    }catch(e){ /* fall through to demo */ }
-  }
-  return demoForecast(coords);
-}
 
 function frontStage(cover){ if(cover<30)return['cirrus','cirrostratus']; if(cover<55)return['cirrostratus','altostratus']; return['altostratus','nimbostratus']; }
 function classifyPeriod(p,arr,i){
@@ -984,9 +1064,9 @@ function outlookHeadline(periods,classed){
   return `<b>Quiet skies for the next couple of days.</b> Best bet is scanning high for wispy cirrus, with fair-weather cumulus bubbling up in the afternoon warmth.`;
 }
 
-async function buildOutlook(coords){
+function buildOutlook(live,coords){
   const el=document.getElementById('outlook');
-  const periods=await loadForecast(coords);
+  const periods=live||demoForecast(coords);
   periods.forEach(p=>p.label=periodLabel(p.when));
   const classed=periods.map((p,i)=>classifyPeriod(p,periods,i));
   const cards=periods.map((p,i)=>{
@@ -1004,17 +1084,16 @@ async function buildOutlook(coords){
       </div></div>`;
   }).join('');
   el.innerHTML=`
-    <div class="outlook-head"><h3>Spotting outlook</h3><span class="hz">Next 48 hours · TWC hourly</span></div>
+    <div class="outlook-head"><h3>Spotting outlook</h3><span class="hz">Next 48 hours · ${live?'Open-Meteo hourly':'sample forecast'}</span></div>
     <p class="outlook-line">${outlookHeadline(periods,classed)}</p>
     <div class="ol-row">${cards}</div>`;
   el.querySelectorAll('.ol-chip').forEach(c=>c.addEventListener('click',()=>openModal(c.dataset.go)));
 }
-function bootOutlook(){ buildOutlook(null); }
 
 /* ---------- boot ---------- */
 (async function(){
   document.getElementById('count-total').textContent=DEX.length;
-  buildFilters(); buildBands(); renderFeed(); renderZoo(); bootSkyNow(); bootOutlook();
+  buildFilters(); buildBands(); renderFeed(); renderZoo(); bootWeather();
   await loadAll();
   buildBands(); renderFeed(); renderZoo(); updateCounters();
 })();
