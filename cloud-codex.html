@@ -1,7 +1,7 @@
-<!-- Cloud Codex — spot real clouds by photographing them -->
+<!-- Cloudex — spot real clouds by photographing them -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cloud Codex</title>
+<title>Cloudex</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -26,10 +26,7 @@
 
   /* Brand app bar */
   .appbar{background:var(--brand)}
-  .appbar-in{display:flex;align-items:center;justify-content:space-between;height:64px}
-  .brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none}
-  .brand img{width:40px;height:40px;display:block}
-  .brand .wm{color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .appbar-in{display:flex;align-items:center;height:64px}
   .appbar-tag{color:#cddef0;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
 
   /* Hero */
@@ -246,7 +243,7 @@
 
   footer{padding:50px 0 80px;color:var(--ink-faint);font-size:13px;max-width:60ch}
   .empty{padding:60px 0;color:var(--ink-faint);font-size:13px;text-align:center}
-  @media (max-width:560px){.stats{grid-template-columns:1fr}.m-body{padding:20px 18px 26px}.m-name{font-size:30px}.appbar-tag{display:none}}
+  @media (max-width:560px){.stats{grid-template-columns:1fr}.m-body{padding:20px 18px 26px}.m-name{font-size:30px}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -265,12 +262,12 @@
   <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.4"/></filter>
 </defs></svg>
 
-<header class="appbar"><div class="wrap appbar-in"><a class="brand" href="https://weather.com" target="_blank" rel="noopener" aria-label="The Weather Channel"><img src="data:image/png;base64,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" alt="" width="40" height="40"></a><span class="appbar-tag">Cloud Codex</span></div></header>
+<header class="appbar"><div class="wrap appbar-in"><span class="appbar-tag">Cloudex</span></div></header>
 
 <div class="wrap">
   <header class="hero">
     <p class="eyebrow">Field Guide № 01 · Shot from the ground up</p>
-    <h1>Cloud Codex</h1>
+    <h1>Cloudex</h1>
     <p class="sub">A cloud only counts when you’ve caught it yourself. Point your camera at the sky, photograph what you see, and watch the card turn into your own shot.</p>
     <div class="meta">
       <span class="spotline">spotted <b><span id="count-spot">0</span>/<span id="count-total">16</span></b></span>
