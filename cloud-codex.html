@@ -1,0 +1,1021 @@
+<!-- Cloud Codex — spot real clouds by photographing them -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cloud Codex</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    /* The Weather Company — Web Component Library tokens */
+    --brand:#204794; --brand-dark:#0d142a; --brand-light:#679ced; --brand-lightest:#ccdef0; --accent-blue:#3a61cc;
+    --surface:#f1f2f6; --surface-card:#ffffff; --surface-2:#f2f2f2; --surface-inset:#fafafa;
+    --ink:#252422; --ink-dim:#676767; --ink-faint:#8d8d8d; --ink-inverse:#ffffff;
+    --line:#0000001a; --line-soft:#f2f2f2;
+    --shadow:0 1px 2px #00000014,0 10px 28px -18px #0000002e;
+    --panel:#ffffff; --panel-solid:#ffffff;
+    --catch:#2f784c; --bolt:#ffd981;
+    --display:"Inter",system-ui,sans-serif; --body:"Inter",system-ui,sans-serif; --mono:"Inter",system-ui,sans-serif;
+    /* altitude classes mapped onto brand hues */
+    --c-high:#3f95b2; --c-mid:#3a61cc; --c-low:#607987; --c-vert:#7361e7; --c-rare:#935ec3; --c-legend:#a06921;
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--body);color:var(--ink);line-height:1.5;background:var(--surface);min-height:100vh;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+
+  /* Brand app bar */
+  .appbar{background:var(--brand)}
+  .appbar-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+  .brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+  .brand img{width:40px;height:40px;display:block}
+  .brand .wm{color:#fff;font-weight:800;font-size:16px;letter-spacing:-.01em}
+  .appbar-tag{color:#cddef0;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+
+  /* Hero */
+  header.hero{padding:44px 0 24px}
+  .eyebrow{font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent-blue);margin:0 0 14px}
+  h1{font-weight:800;font-size:clamp(40px,7vw,72px);line-height:1;margin:0;letter-spacing:-.03em;color:var(--ink)}
+  .hero p.sub{max-width:48ch;color:var(--ink-dim);font-size:16.5px;margin:16px 0 0}
+  .hero .meta{display:flex;gap:24px;flex-wrap:wrap;margin-top:22px;font-size:12px;font-weight:600;color:var(--ink-dim)}
+  .hero .meta b{color:var(--ink);font-weight:800}
+  .hero .meta .spotline b{color:var(--catch)}
+  .progress{height:6px;border-radius:99px;background:rgba(0,0,0,.07);max-width:340px;margin-top:14px;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand-light),var(--catch));transition:width .5s cubic-bezier(.2,.7,.3,1)}
+
+  /* Sky now */
+  .sky-now{margin-top:22px;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:linear-gradient(120deg,#eef4ff,#ffffff);box-shadow:var(--shadow);transition:opacity .2s}
+  .sky-now.loading{opacity:.55}
+  .snow-main{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;padding:20px 22px}
+  .snow-place{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-dim);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .snow-loc{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-blue);background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;transition:.16s}
+  .snow-loc:hover{border-color:var(--accent-blue);background:#fff}
+  .snow-now{display:flex;align-items:baseline;gap:14px;margin-top:10px}
+  .snow-temp{font-weight:800;font-size:46px;line-height:1;letter-spacing:-.02em}
+  .snow-phrase{font-weight:700;font-size:20px;color:var(--ink)}
+  .snow-cond{color:var(--ink-dim);font-size:14px;margin-top:7px;max-width:42ch}
+  .snow-stats{display:grid;grid-template-columns:repeat(2,auto);gap:12px 30px;align-content:center}
+  .snow-stats span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .snow-stats b{font-size:16px;color:var(--ink);font-weight:800}
+  .snow-outlook{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 22px;border-top:1px solid var(--line);background:rgba(255,255,255,.55)}
+  .snow-ol-lab{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+  .snow-bandrow{display:flex;gap:7px;flex-wrap:wrap}
+  .snow-band{font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;transition:.16s}
+  .snow-band:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .snow-band.on{color:#fff;background:var(--accent);border-color:var(--accent);font-weight:700}
+  .snow-demo,.snow-note{font-size:9.5px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em;margin-left:auto}
+  .snow-note{max-width:40ch;text-align:right}
+  @media(max-width:560px){.snow-temp{font-size:38px}.snow-note{margin-left:0;text-align:left}}
+
+  /* Spotting outlook */
+  .outlook{margin-top:16px}
+  .outlook-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 8px}
+  .outlook-head h3{font-weight:800;font-size:20px;margin:0;letter-spacing:-.02em}
+  .outlook-head .hz{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .outlook-line{font-size:14.5px;color:var(--ink-dim);margin:0 0 14px;max-width:74ch}
+  .outlook-line b{font-weight:800;color:var(--ink)}
+  .ol-row{display:flex;gap:12px;overflow-x:auto;padding-bottom:10px;scroll-snap-type:x proximity}
+  .ol-row::-webkit-scrollbar{height:8px}.ol-row::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  .ol-card{flex:0 0 160px;scroll-snap-align:start;background:var(--surface-card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .ol-vis{height:74px;background:#0a0e22;overflow:hidden;position:relative;border-bottom:3px solid var(--accent,transparent)}
+  .ol-vis svg{width:100%;height:100%}
+  .ol-cover{position:absolute;top:7px;right:8px;font-size:10px;font-weight:800;color:var(--ink);background:rgba(255,255,255,.9);border-radius:999px;padding:2px 7px}
+  .ol-b{padding:10px 12px 12px}
+  .ol-when{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  .ol-label{font-weight:800;font-size:15px;margin:3px 0 5px;line-height:1.05}
+  .ol-note{font-size:11.5px;color:var(--ink-dim);line-height:1.42;min-height:46px}
+  .ol-chips{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+  .ol-chip{font-size:9px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:3px 8px;cursor:pointer;color:var(--ink-dim);transition:.15s;background:transparent}
+  .ol-chip:hover{color:#fff;background:var(--accent,var(--ink));border-color:transparent}
+
+  /* Filters */
+  .filters{position:sticky;top:0;z-index:30;backdrop-filter:blur(10px);background:rgba(241,242,246,.9);border-bottom:1px solid var(--line)}
+  .filters .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 0}
+  .chip{font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);background:var(--surface-card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer;transition:.18s;white-space:nowrap}
+  .chip:hover{color:var(--ink);border-color:var(--ink-faint)}
+  .chip[aria-pressed="true"]{color:#fff;background:var(--ink);border-color:var(--ink);font-weight:700}
+  .chip .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle;transform:translateY(-1px)}
+
+  /* Bands + grid */
+  .band{padding:40px 0 8px;scroll-margin-top:64px}
+  .band-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:24px}
+  .band-head h2{font-weight:800;font-size:28px;margin:0;letter-spacing:-.02em}
+  .band-head .alt{font-size:12px;font-weight:600;color:var(--ink-faint);letter-spacing:.02em}
+  .band-head .tag{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:6px;color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:16px}
+
+  .card{text-align:left;cursor:pointer;color:inherit;font:inherit;background:var(--surface-card);border:1px solid var(--line);border-radius:12px;overflow:hidden;padding:0;box-shadow:var(--shadow);transition:transform .2s cubic-bezier(.2,.7,.3,1),border-color .2s,box-shadow .2s;position:relative;display:flex;flex-direction:column}
+  .card:hover{transform:translateY(-4px);border-color:var(--accent,var(--ink-faint));box-shadow:0 14px 34px -18px #00000040}
+  .card:focus-visible{outline:2px solid var(--accent,var(--accent-blue));outline-offset:3px}
+  .card .portrait{aspect-ratio:16/11;width:100%;display:block;background:#0a0e22;position:relative;overflow:hidden}
+  .card .portrait svg{width:100%;height:100%;display:block}
+  .card .portrait img.cap{width:100%;height:100%;object-fit:cover;display:block}
+  .card:not(.spotted) .portrait .illus{filter:grayscale(.4) brightness(.82)}
+  .card .to-capture{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;justify-content:center;padding:7px;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(180deg,transparent,rgba(6,9,20,.82))}
+  .card .multi{position:absolute;left:10px;bottom:10px;font-size:11px;font-weight:800;color:#fff;background:var(--catch);border-radius:999px;padding:3px 9px}
+  .card .body{padding:13px 15px 16px}
+  .card .num{font-size:11px;font-weight:700;color:var(--ink-faint)}
+  .card .name{font-weight:800;font-size:20px;line-height:1.05;margin:4px 0 2px;letter-spacing:-.01em}
+  .card .latin{font-size:12.5px;color:var(--ink-faint)}
+  .card .foot{display:flex;align-items:center;justify-content:space-between;margin-top:12px;gap:8px}
+  .pill{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;color:#fff}
+  .rare-flag{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+  .spot-stamp{position:absolute;top:11px;right:11px;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.35);color:#fff;font-size:14px;transition:.2s;backdrop-filter:blur(3px)}
+  .card.spotted .spot-stamp{background:var(--catch);color:#fff;border-color:var(--catch);font-weight:700}
+  .card.spotted::after{content:"";position:absolute;inset:0;border-radius:12px;box-shadow:inset 0 0 0 2px var(--catch);pointer-events:none;opacity:.55}
+
+  /* Modal */
+  .scrim{position:fixed;inset:0;z-index:60;background:rgba(13,20,42,.55);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:24px}
+  .scrim.open{display:flex}
+  .modal{background:var(--panel-solid);border:1px solid var(--line);border-radius:16px;max-width:780px;width:100%;max-height:90vh;overflow:auto;position:relative;box-shadow:0 40px 100px -30px #00000066}
+  .modal .close{position:absolute;top:14px;right:14px;z-index:3;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(255,255,255,.85);color:var(--ink);font-size:18px;cursor:pointer;display:grid;place-items:center}
+  .modal .close:hover{background:#fff}
+  .m-hero{width:100%;aspect-ratio:16/8;display:block;background:#0a0e22;position:relative;overflow:hidden}
+  .m-hero svg,.m-hero img{width:100%;height:100%}
+  .m-hero img{object-fit:cover}
+  .m-body{padding:24px 28px 30px}
+  .m-num{font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase}
+  .m-name{font-weight:800;font-size:36px;line-height:1;margin:8px 0 2px;letter-spacing:-.03em}
+  .m-latin{font-size:16px;color:var(--ink-dim)}
+  .m-tags{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 4px;align-items:center}
+  .m-desc{font-size:16px;color:var(--ink);margin:18px 0 6px;max-width:62ch}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:14px 28px;margin:22px 0}
+  .stat .lab{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:7px;display:flex;justify-content:space-between}
+  .stat .lab span{color:var(--ink-dim)}
+  .meter{height:7px;border-radius:99px;background:rgba(0,0,0,.08);overflow:hidden}
+  .meter i{display:block;height:100%;border-radius:99px;background:var(--accent)}
+  .sec-h{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:24px 0 12px;border-top:1px solid var(--line);padding-top:18px;display:flex;justify-content:space-between;align-items:center}
+  .abil{display:flex;gap:8px;flex-wrap:wrap}
+  .abil .a{font-size:11.5px;font-weight:600;padding:6px 12px;border-radius:8px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink)}
+
+  /* Capture gallery */
+  .cap-cta{display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;padding:26px;border:1.5px dashed var(--line);border-radius:12px;background:var(--surface-inset)}
+  .cap-cta .big{font-weight:800;font-size:20px}
+  .cap-cta p{margin:0;color:var(--ink-dim);font-size:13.5px;max-width:40ch}
+  .btn-cap{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border:1px solid var(--catch);background:var(--catch);color:#fff;border-radius:8px;padding:12px 20px;transition:.16s}
+  .btn-cap:hover{filter:brightness(1.08)}
+  .btn-cap.ghost{background:transparent;color:var(--catch)}
+  .btn-cap.ghost:hover{background:rgba(47,120,76,.1);filter:none}
+  .cap-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px}
+  .cap-item{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0a0e22;cursor:pointer}
+  .cap-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+  .cap-item.sel{outline:2px solid var(--catch);outline-offset:-2px}
+  .cap-item .cap-badges{position:absolute;top:6px;left:6px;display:flex;gap:4px}
+  .cap-item .cap-b{font-size:9px;font-weight:700;border-radius:999px;padding:2px 6px;background:rgba(6,9,20,.72);color:#fff}
+  .cap-item .cap-b.shared{background:var(--catch);color:#fff}
+  .cap-item .cap-meta{position:absolute;left:0;right:0;bottom:0;padding:6px 7px;background:linear-gradient(180deg,transparent,rgba(6,9,20,.9));font-size:9px;font-weight:600;color:#eef2f8;display:flex;justify-content:space-between;align-items:center;gap:4px}
+  .cap-add{display:grid;place-items:center;border:1.5px dashed var(--line);border-radius:10px;background:var(--surface-inset);cursor:pointer;color:var(--ink-dim);font-size:11px;font-weight:600;min-height:96px;transition:.16s;aspect-ratio:1}
+  .cap-add:hover{color:var(--ink);border-color:var(--catch)}
+
+  /* capture editor */
+  .cap-editor{margin-top:14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface-inset)}
+  .cap-editor .ce-img{width:100%;max-height:240px;object-fit:cover;display:block;background:#0a0e22}
+  .cap-editor .ce-body{padding:16px 16px 18px}
+  .ce-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .ce-lab{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .ce-body select{font-size:12px;font-weight:600;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+  .tag-chips{display:flex;gap:6px;flex-wrap:wrap}
+  .tag-chip{font-size:12px;font-weight:600;border-radius:999px;padding:5px 10px;display:inline-flex;align-items:center;gap:6px;background:rgba(147,94,195,.1);border:1px solid rgba(147,94,195,.32);color:#6a4196}
+  .tag-chip button{background:none;border:none;color:#6a4196;cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:.7}
+  .tag-chip button:hover{opacity:1}
+  .tag-suggest{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .tag-s{font-size:11.5px;font-weight:600;border-radius:999px;padding:5px 10px;cursor:pointer;background:#fff;border:1px dashed var(--line);color:var(--ink-dim);transition:.15s}
+  .tag-s:hover{color:var(--c-rare);border-color:var(--c-rare);border-style:solid}
+  .tag-input-row{display:flex;gap:8px;margin-top:12px}
+  .tag-input-row input{flex:1;font-family:var(--body);font-size:13px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:8px;padding:9px 11px}
+  .tag-input-row input:focus{outline:none;border-color:var(--accent-blue)}
+  .tag-add{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border:1px solid var(--c-rare);background:var(--c-rare);color:#fff;border-radius:8px;padding:0 16px}
+  .ce-share{display:flex;align-items:center;gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+  .ce-share label{font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:9px}
+  .ce-share input{width:18px;height:18px;accent-color:var(--catch);cursor:pointer}
+  .ce-share .priv{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-faint)}
+  .ce-actions{display:flex;justify-content:space-between;margin-top:16px;gap:10px}
+  .ce-del{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;border:1px solid var(--line);color:var(--ink-dim);border-radius:8px;padding:9px 14px}
+  .ce-del:hover{border-color:#cb4a14;color:#cb4a14}
+  .ce-del.arm{background:#cb4a14;color:#fff;border-color:#cb4a14}
+  .ce-close{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px 14px}
+
+  /* Cloud Zoo */
+  .zoo{padding:44px 0 8px}
+  .zoo .band-head{align-items:center}
+  .trend{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
+  .trend-chip{font-size:13px;font-weight:600;border-radius:999px;padding:7px 13px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:var(--surface-card);border:1px solid var(--line);color:var(--ink-dim);transition:.16s}
+  .trend-chip:hover{color:var(--ink);border-color:var(--c-rare)}
+  .trend-chip[aria-pressed="true"]{background:var(--c-rare);border-color:var(--c-rare);color:#fff;font-weight:700}
+  .trend-chip .cnt{font-size:11px;font-weight:700;opacity:.75}
+  .zoo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+  .zcard{background:var(--surface-card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);transition:.18s}
+  .zcard:hover{transform:translateY(-3px);border-color:var(--c-rare)}
+  .zcard .zimg{width:100%;aspect-ratio:4/3;background:#0a0e22;overflow:hidden;position:relative}
+  .zcard .zimg svg,.zcard .zimg img{width:100%;height:100%}.zcard .zimg img{object-fit:cover}
+  .zcard .ztag{position:absolute;left:8px;bottom:8px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px;background:rgba(13,20,42,.82);color:#fff;display:inline-flex;gap:5px;align-items:center}
+  .zcard .zb{padding:10px 13px 13px}
+  .zcard .zwho{display:flex;align-items:center;gap:8px}
+  .zcard .zwn{font-size:12.5px;font-weight:700}
+  .zcard .zmeta{font-size:10px;font-weight:600;color:var(--ink-faint);margin-top:5px;text-transform:uppercase;letter-spacing:.03em}
+  .zoo-empty{padding:34px 0;color:var(--ink-faint);font-size:12.5px}
+
+  /* Evolution line */
+  .evo{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap}
+  .evo .step{flex:1;min-width:108px;background:var(--surface-inset);border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;transition:.18s;text-align:center}
+  .evo .step:hover{border-color:var(--ink-faint);background:var(--surface-2)}
+  .evo .step.cur{border-color:var(--accent);background:#fff}
+  .evo .step .thumb{width:100%;height:64px;border-radius:8px;background:#0a0e22;display:block;overflow:hidden}
+  .evo .step .thumb svg,.evo .step .thumb img{width:100%;height:100%}
+  .evo .step .thumb img{object-fit:cover}
+  .evo .step .sn{font-weight:800;font-size:14px;margin-top:8px;line-height:1.05}
+  .evo .step .ss{font-size:9.5px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;margin-top:3px}
+  .evo .arrow{display:grid;place-items:center;color:var(--ink-faint);font-size:18px;min-width:14px}
+
+  /* Community feed */
+  .community{padding:44px 0 8px}
+  .community .band-head{align-items:center}
+  .feed{display:flex;gap:14px;overflow-x:auto;padding:4px 0 14px;scroll-snap-type:x proximity}
+  .feed::-webkit-scrollbar{height:8px} .feed::-webkit-scrollbar-thumb{background:var(--line);border-radius:99px}
+  .fcard{flex:0 0 200px;scroll-snap-align:start;background:var(--surface-card);border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:var(--shadow);transition:.18s}
+  .fcard:hover{transform:translateY(-3px);border-color:var(--ink-faint)}
+  .fcard .fimg{width:100%;aspect-ratio:4/3;background:#0a0e22;overflow:hidden}
+  .fcard .fimg svg,.fcard .fimg img{width:100%;height:100%} .fcard .fimg img{object-fit:cover}
+  .fcard .fb{padding:11px 13px 13px}
+  .fcard .who{display:flex;align-items:center;gap:8px}
+  .avatar{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff}
+  .fcard .wn{font-size:13px;font-weight:700}
+  .fcard .cn{font-weight:800;font-size:16px;margin-top:7px;line-height:1.05}
+  .fcard .meta{font-size:10px;font-weight:600;color:var(--ink-faint);margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
+  .note{font-size:12.5px;color:var(--ink-faint);max-width:64ch;margin:2px 0 18px}
+
+  footer{padding:50px 0 80px;color:var(--ink-faint);font-size:13px;max-width:60ch}
+  .empty{padding:60px 0;color:var(--ink-faint);font-size:13px;text-align:center}
+  @media (max-width:560px){.stats{grid-template-columns:1fr}.m-body{padding:20px 18px 26px}.m-name{font-size:30px}.appbar-tag{display:none}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<!-- shared SVG defs -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="sky-high" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2d6b9c"/><stop offset="1" stop-color="#7fb6d8"/></linearGradient>
+  <linearGradient id="sky-mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a5f8f"/><stop offset="1" stop-color="#8497b8"/></linearGradient>
+  <linearGradient id="sky-low" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#52617e"/><stop offset="1" stop-color="#9aa6b6"/></linearGradient>
+  <linearGradient id="sky-storm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4258"/><stop offset="1" stop-color="#5c6275"/></linearGradient>
+  <linearGradient id="sky-night" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#070b22"/><stop offset=".6" stop-color="#0e1a3e"/><stop offset="1" stop-color="#243a63"/></linearGradient>
+  <linearGradient id="sky-twilight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#10204a"/><stop offset=".55" stop-color="#3a3f74"/><stop offset="1" stop-color="#a06a8e"/></linearGradient>
+  <linearGradient id="cloud-w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfdcee"/></linearGradient>
+  <linearGradient id="cloud-grey" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#aab6c6"/><stop offset="1" stop-color="#5b6577"/></linearGradient>
+  <linearGradient id="iri" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#bdf3ff"/><stop offset=".35" stop-color="#c9b6ff"/><stop offset=".7" stop-color="#ffc4e8"/><stop offset="1" stop-color="#fff1b8"/></linearGradient>
+  <radialGradient id="sun" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff7e0"/><stop offset="1" stop-color="#fff7e0" stop-opacity="0"/></radialGradient>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.4"/></filter>
+</defs></svg>
+
+<header class="appbar"><div class="wrap appbar-in"><a class="brand" href="https://weather.com" target="_blank" rel="noopener" aria-label="The Weather Channel"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAACXBIWXMAACxLAAAsSwGlPZapAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAOdEVYdFNvZnR3YXJlAEZpZ21hnrGWYwAABYFJREFUeAHtWv912zgMhu/1/ygTVJ2gzgRVJog7QZwJ6k4Qe4I6E9idIL4JpE5QdwLrJrA34PEzAQtmREmu4zul0vceHynwNwiAAO2BsaAO4y/qOHoGUMfRM4A6jp4B1HH0DKCOo2cAdRw9A6jj6BlAHUfnGfCuhLazaV3RJ7bpu02ZTV9sGtEbRhkDVoPB4CHUwT4gpTbLbJvMlsf0xlHGgFhtDMzY2e+hLQ+ZNqQ/CGUMSDgBOTlRh5g/lrSFujyRUxn0ubMpUvXo+4PL9+TUp10w1Ui4zTRAj7yxEtVmWjLX0rQM594CUJfUpgV/55zDRoBpqN8YZzeACbUM5zIAG0qoUBnB35zHVDCFYE/0dxvwji4DbBQbzsjZAY2cWmQLLsWAvW0wzlb4xrNVt8ilPME7znE7YMMJ5xEd3xL/Oy4lAbgNEnaWbshtOue6LbUIdQwYwZLb/GOA/p6/I+OcJ326uB3mVBhE1N9TyzDAXUgdRh8OU/uxowuizAbk5MJdAOGu6PWM809UOD5Lm/7xaOdix3PiBrnl8oYuhRL3eKvqUqb9VLSxajtk2sKcD3GdU/5OeezYXBBlKgCLLs7KL871A0nG+c5ec0J/DedmacfL6T9GyAYknMsGJaQlXuTh1ci463Co2n+26YZzzTj0man6W1W/pELX0cZ/kHniPjdUqKIgU2OiX67qZmodmO8r+QhIxkI2x98i6pKnhsNdm4+4zUaNmajyT28MSFikylvjxF9oQ5seTRFByjixKqfeOiOjQnQe00gfNfbC32iIAXozGzXwmMtzNeGc+8i3vB3M+VtsRmrTN7U4WdTGW2wq7dW8Qhsxben1WfD3xFuDrGnC8279jYY8QZx8zOL+xDT9LAaREpH9pGgA+syoEEWhJ5zP6LSrLVJ9tae5UzbjV2BOUmsvjUGqXOGEnG5mapDDZmEA+RT3TOFYH/nSG0c2+9XWzblPJO3PwKE/xg3V1aHKEZKNCTexeehnVGb9lTg+axEjd4fv1CJxpW6M0unfRKTm3nhzpk0HqWLAnfcdc66vvJEqjzmHyuRUWH2tLsTlXIlvTsfYUbMTPBg+nlNem7Qq1MNUQ1trow0N01NF35adqnGGz6jF+vVyi0wVbW/4uKwdoTHTxAhumsxpKh5j66LBjBw3wQg57ZwKuzAu6bMiZ5SuqHgM0f3gU3zkvjg5/Vwufd/zfGue2ze+vlFbknPJr3jcqKb9AX04TB3HOQyAeH2n9gKin9HLV+kj1DFgadPtgEHOn87I+QHwvSfUXjzZNWK9lYdU5QjN8OsOCsb58RE/csqvQMQ/nNJbRkgCMrV5OC5IqXFvBXFJe7mDQwjV7QLlurZNx69FiAF7/9+44EM7PmVXCVTk2qYPtowkC83Iqcy+jlVIh6Of0Y+c43LN5Q9qM2h7zfmtqs/UGCtv/Ac69QnNVDtA00C9jhb3UaLqI06HRGYJM1LaH4XHqk3M5XmJY6Trj8Jvnv/RFJHiVPc3xy9YL1AqAScGKlgI7IJ2lAAsCt4c0rPasIx9YDK3GXn1svkR18+9eolSUY8xvvG3HxhVopQBxvvdvwZVbeH14bbQou0jrhlH6Fcefc35iseHusnhNT7A0C2A08rovJ+yH+xiViy6I17oafrZDGBQjIL5jQiz7k0Qi84VvfEGsHkuPpMTz5heF6JSoiI6NZbgEAO+QGdZnOQxEQmi1sj7U2qE9pqRP+h1IOH6kpw9QP5AxU0j8+dUIckhBqAzDNcYcTseM9SDRtNfd/f/C+C+eJmNmb6m1wFuBhhfOGgT/msfGC224t64Z72MXr4kH9AkGoQUYNExnS7GORXh9FCVTzGyTZBRYQv8sdcB+h59OEwdR88A6jg6z4B/AdYICE7x6x6qAAAAAElFTkSuQmCC" alt="" width="40" height="40"></a><span class="appbar-tag">Cloud Codex</span></div></header>
+
+<div class="wrap">
+  <header class="hero">
+    <p class="eyebrow">Field Guide № 01 · Shot from the ground up</p>
+    <h1>Cloud Codex</h1>
+    <p class="sub">A cloud only counts when you’ve caught it yourself. Point your camera at the sky, photograph what you see, and watch the card turn into your own shot.</p>
+    <div class="meta">
+      <span class="spotline">spotted <b><span id="count-spot">0</span>/<span id="count-total">16</span></b></span>
+      <span><b id="count-photos">0</b> photos</span>
+      <span><b>6</b> altitude classes</span>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+  </header>
+  <section class="sky-now" id="skyNow" aria-live="polite"></section>
+  <section class="outlook" id="outlook"></section>
+</div>
+
+<div class="filters"><div class="wrap"><div class="row" id="filters" role="group" aria-label="Filter by class"></div></div></div>
+
+<main class="wrap" id="bands"></main>
+
+<div class="wrap">
+  <section class="zoo" id="zoo">
+    <div class="band-head">
+      <span class="tag" style="background:var(--c-rare)">Cloud Zoo</span>
+      <h2>What people saw up there</h2>
+    </div>
+    <p class="note">The other side of the codex: not what kind of cloud, but what it <em>looked like</em>. Tap a shape to see everyone's. Sample contributors below; your photos appear here only for the ones you choose to share.</p>
+    <div class="trend" id="trend"></div>
+    <div class="zoo-grid" id="zooGrid"></div>
+  </section>
+
+  <section class="community">
+    <div class="band-head">
+      <span class="tag" style="background:var(--catch)">Community</span>
+      <h2>Friends’ sightings</h2>
+    </div>
+    <p class="note">A preview of a shared spotter feed. The entries below are sample spotters; your own latest catch shows up first. Your photos are saved only in this browser — nothing is uploaded.</p>
+    <div class="feed" id="feed"></div>
+  </section>
+
+  <footer>
+    Classification follows the World Meteorological Organization’s ten cloud genera plus a handful of rare and high-atmosphere forms. On a phone, the capture button opens your camera; on a laptop it opens a file picker. Photos are downscaled and stored locally in this browser.
+  </footer>
+</div>
+
+<input type="file" accept="image/*" capture="environment" id="capInput" multiple hidden>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="m-name">
+  <div class="modal" id="modal">
+    <button class="close" id="closeBtn" aria-label="Close entry">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- classes ---------- */
+const CLASSES={
+  high:{label:"High",hex:"#3f95b2",alt:"Above ~20,000 ft · 6 km+"},
+  mid:{label:"Mid",hex:"#3a61cc",alt:"6,500 – 20,000 ft · 2–6 km"},
+  low:{label:"Low",hex:"#607987",alt:"Surface – 6,500 ft · up to 2 km"},
+  vert:{label:"Towering",hex:"#7361e7",alt:"Low base → 60,000 ft tops"},
+  rare:{label:"Rare Forms",hex:"#935ec3",alt:"Special shapes & features"},
+  legend:{label:"Legendary",hex:"#a06921",alt:"Upper atmosphere & fleeting phenomena"},
+};
+const BAND_ORDER=["high","mid","low","vert","rare","legend"];
+const bandTitle=c=>({high:"High clouds",mid:"Middle clouds",low:"Low clouds",vert:"Towering clouds",rare:"Rare forms",legend:"Legendary"}[c]);
+
+/* ---------- artwork ---------- */
+function sky(id){return `<rect width="320" height="220" fill="url(#${id})"/>`}
+function lump(cx,cy,r){return `<circle cx="${cx}" cy="${cy}" r="${r}"/>`}
+const ART={
+  cirrus:()=>`${sky('sky-high')}<g fill="none" stroke="url(#cloud-w)" stroke-width="5" stroke-linecap="round" opacity=".95" filter="url(#soft)"><path d="M40 70 C120 50 150 64 250 56 C260 70 220 72 200 76"/><path d="M70 110 C150 92 190 104 280 96 C288 110 250 112 232 116"/><path d="M30 150 C100 138 140 148 210 142 C218 154 188 156 172 160"/></g>`,
+  cirrocumulus:()=>`${sky('sky-high')}<g fill="url(#cloud-w)" opacity=".95" filter="url(#soft)">${[60,98,136,174,212,250].map(x=>[70,100,130].map(y=>`<circle cx="${x}" cy="${y}" r="7"/>`).join('')).join('')}</g>`,
+  cirrostratus:()=>`${sky('sky-high')}<rect width="320" height="220" fill="#fff" opacity=".10"/><circle cx="160" cy="110" r="60" fill="none" stroke="#fff" stroke-width="2.5" opacity=".7"/><circle cx="160" cy="110" r="80" fill="url(#sun)"/><circle cx="160" cy="110" r="16" fill="#fff8e6"/>`,
+  altocumulus:()=>`${sky('sky-mid')}<g fill="url(#cloud-w)" filter="url(#soft)">${[60,118,176,234].map((x,i)=>`<ellipse cx="${x}" cy="${92+(i%2)*8}" rx="26" ry="13"/>`).join('')}${[88,146,204].map((x,i)=>`<ellipse cx="${x}" cy="${134+(i%2)*6}" rx="24" ry="12" opacity=".85"/>`).join('')}</g>`,
+  altostratus:()=>`${sky('sky-mid')}<rect y="40" width="320" height="150" fill="url(#cloud-grey)" opacity=".82"/><circle cx="160" cy="100" r="34" fill="#e8eef6" opacity=".45"/>`,
+  nimbostratus:()=>`${sky('sky-storm')}<rect y="20" width="320" height="150" fill="url(#cloud-grey)"/><g stroke="#cdd8e6" stroke-width="2" opacity=".7" stroke-linecap="round">${Array.from({length:14},(_,i)=>`<line x1="${20+i*22}" y1="172" x2="${10+i*22}" y2="212"/>`).join('')}</g>`,
+  stratus:()=>`${sky('sky-low')}<rect y="96" width="320" height="60" fill="url(#cloud-grey)" opacity=".9"/><rect y="150" width="320" height="14" fill="#c2ccd8" opacity=".5"/>`,
+  stratocumulus:()=>`${sky('sky-low')}<g fill="url(#cloud-grey)" filter="url(#soft)"><ellipse cx="70" cy="120" rx="56" ry="30"/><ellipse cx="160" cy="118" rx="60" ry="32"/><ellipse cx="250" cy="122" rx="56" ry="30"/></g><rect y="150" width="320" height="50" fill="url(#sky-low)"/>`,
+  cumulus:()=>`${sky('sky-low')}<g fill="url(#cloud-w)" filter="url(#soft)">${lump(120,120,34)}${lump(160,100,42)}${lump(205,118,36)}${lump(160,132,46)}<rect x="116" y="132" width="92" height="20" rx="6"/></g>`,
+  cumulonimbus:()=>`${sky('sky-storm')}<g fill="url(#cloud-w)" filter="url(#soft)"><path d="M70 70 Q60 50 110 48 Q150 30 200 46 Q250 44 250 70 Z"/>${lump(110,100,30)}${lump(160,92,38)}${lump(205,104,30)}${lump(160,150,46)}${lump(120,150,34)}${lump(200,150,36)}<rect x="86" y="150" width="148" height="28" rx="8"/></g><polygon points="156,150 138,186 156,184 142,214 178,170 158,172" fill="var(--bolt)"/>`,
+  lenticular:()=>`${sky('sky-mid')}<polygon points="90,200 160,120 230,200" fill="#2e3a4f"/><g fill="url(#cloud-w)" filter="url(#soft)"><ellipse cx="172" cy="78" rx="86" ry="15"/><ellipse cx="160" cy="100" rx="104" ry="17" opacity=".95"/><ellipse cx="150" cy="122" rx="72" ry="12" opacity=".85"/></g>`,
+  mammatus:()=>`${sky('sky-storm')}<rect y="0" width="320" height="86" fill="url(#cloud-grey)"/><g fill="url(#cloud-grey)" filter="url(#soft)">${[34,80,126,172,218,264,300].map(x=>`<ellipse cx="${x}" cy="92" rx="26" ry="22"/>`).join('')}</g>`,
+  asperitas:()=>`${sky('sky-storm')}<path d="M0 70 Q40 40 80 76 Q120 110 160 72 Q200 38 240 78 Q280 112 320 74 L320 200 L0 200 Z" fill="url(#cloud-grey)" opacity=".95" filter="url(#soft)"/><path d="M0 110 Q40 86 80 116 Q120 142 160 112 Q200 84 240 116 Q280 144 320 112" fill="none" stroke="#3c4658" stroke-width="3" opacity=".6"/>`,
+  noctilucent:()=>`${sky('sky-night')}<g fill="#fff">${Array.from({length:30},()=>`<circle cx="${(Math.random()*320)|0}" cy="${(Math.random()*120)|0}" r="${Math.random()<.2?1.4:.8}" opacity="${(.4+Math.random()*.5).toFixed(2)}"/>`).join('')}</g><g fill="none" stroke="#9be9ff" stroke-width="2" stroke-linecap="round" opacity=".9" filter="url(#soft)"><path d="M20 130 C90 116 150 130 300 118"/><path d="M30 146 C100 134 170 148 300 138"/><path d="M40 162 C110 152 180 164 290 156"/></g>`,
+  nacreous:()=>`${sky('sky-twilight')}<g filter="url(#soft)"><ellipse cx="150" cy="98" rx="110" ry="30" fill="url(#iri)" opacity=".9"/><ellipse cx="168" cy="120" rx="80" ry="20" fill="url(#iri)" opacity=".75"/></g><polygon points="0,200 0,180 320,150 320,200" fill="#1a1330" opacity=".8"/>`,
+  kh:()=>`${sky('sky-mid')}<g fill="url(#cloud-w)" filter="url(#soft)">${[40,108,176,244].map(x=>`<path d="M${x} 120 q14 -42 40 -30 q22 10 6 30 q-26 6 -46 0 Z"/>`).join('')}<rect x="20" y="120" width="280" height="18" rx="6" opacity=".9"/></g>`,
+};
+
+/* ---------- dex ---------- */
+const DEX=[
+  {n:1,slug:"cirrus",name:"Cirrus",latin:"Cirrus",cls:"high",comp:"Ice crystals",rarity:"Common",precip:0,intensity:1,alt:"20,000–40,000 ft",tagline:"Mare's tails.",desc:"Thin, wispy filaments brushed across the high sky by fast winds. Pure ice, no rain — but when cirrus thickens and streams in from one direction, a warm front and worsening weather are usually a day or two behind.",abilities:["Mare's Tails","Fall Streaks"],evo:"front"},
+  {n:2,slug:"cirrocumulus",name:"Cirrocumulus",latin:"Cirrocumulus",cls:"high",comp:"Ice crystals",rarity:"Uncommon",precip:0,intensity:1,alt:"20,000–40,000 ft",tagline:"Mackerel sky.",desc:"A field of tiny, rippled cloudlets with no shadows, packed in rows like fish scales. Short-lived and a sign of instability high up.",abilities:["Ripples"],evo:null},
+  {n:3,slug:"cirrostratus",name:"Cirrostratus",latin:"Cirrostratus",cls:"high",comp:"Ice crystals",rarity:"Common",precip:0,intensity:1,alt:"20,000–40,000 ft",tagline:"The halo-maker.",desc:"A thin, milky veil over the whole sky that bends sunlight or moonlight into a glowing 22° ring. That halo is the classic tell that rain is on the way within a day.",abilities:["22° Halo","Sun Veil"],evo:"front"},
+  {n:4,slug:"altocumulus",name:"Altocumulus",latin:"Altocumulus",cls:"mid",comp:"Water / mixed",rarity:"Common",precip:1,intensity:2,alt:"6,500–20,000 ft",tagline:"Morning warning.",desc:"Gray-and-white patches in rolls or waves, each with its own shading. A warm, muggy morning thick with altocumulus often means thunderstorms by afternoon.",abilities:["Rolls","Castellanus"],evo:null},
+  {n:5,slug:"altostratus",name:"Altostratus",latin:"Altostratus",cls:"mid",comp:"Water / mixed",rarity:"Common",precip:2,intensity:2,alt:"6,500–20,000 ft",tagline:"The watery sun.",desc:"A featureless gray-blue sheet that dims the sun to a pale disc, like light through frosted glass. The opening act before steady, widespread rain.",abilities:["Watery Sun"],evo:"front"},
+  {n:6,slug:"nimbostratus",name:"Nimbostratus",latin:"Nimbostratus",cls:"mid",comp:"Water / ice",rarity:"Common",precip:5,intensity:3,alt:"2,000–10,000 ft",tagline:"The rain machine.",desc:"Thick, dark, shapeless and low — the cloud that just rains. No lightning, just hours of steady soaking rain or snow over a wide area.",abilities:["Steady Rain","Virga"],evo:"front"},
+  {n:7,slug:"stratus",name:"Stratus",latin:"Stratus",cls:"low",comp:"Water droplets",rarity:"Common",precip:1,intensity:1,alt:"0–6,500 ft",tagline:"Fog that lifted.",desc:"A flat, gray ceiling hanging so low it blurs into mist or hilltop fog. The gloomy-overcast cloud. Drizzle is about the worst it manages.",abilities:["Drizzle","Fog"],evo:null},
+  {n:8,slug:"stratocumulus",name:"Stratocumulus",latin:"Stratocumulus",cls:"low",comp:"Water droplets",rarity:"Common",precip:1,intensity:1,alt:"0–6,500 ft",tagline:"Earth's most common cloud.",desc:"Low, lumpy rolls and patches with strips of blue showing through the gaps. The cloud you see more than any other; rarely more than light rain.",abilities:["Rolls","Honeycomb"],evo:null},
+  {n:9,slug:"cumulus",name:"Cumulus",latin:"Cumulus",cls:"low",comp:"Water droplets",rarity:"Common",precip:1,intensity:1,alt:"2,000–6,500 ft base",tagline:"Fair-weather cotton.",desc:"The cloud a child draws: a flat-bottomed cotton puff on a sunny sky. Harmless on its own — but pump it full of warm rising air and it grows up, and up.",abilities:["Updraft"],evo:"storm"},
+  {n:10,slug:"cumulonimbus",name:"Cumulonimbus",latin:"Cumulonimbus",cls:"vert",comp:"Water / ice",rarity:"Common",precip:5,intensity:5,alt:"2,000 → 60,000 ft",tagline:"The storm titan.",desc:"The final form. A towering thunderhead that climbs miles into the sky and spreads into a flat anvil at the top, packing lightning, hail, torrential rain, and the occasional tornado.",abilities:["Incus (Anvil)","Lightning","Hail","Tuba (Funnel)"],evo:"storm"},
+  {n:11,slug:"lenticular",name:"Lenticular",latin:"Altocumulus lenticularis",cls:"rare",comp:"Water / mixed",rarity:"Rare",precip:0,intensity:1,alt:"6,500–20,000 ft",tagline:"The UFO cloud.",desc:"Smooth, stacked lens shapes that hover, motionless, downwind of mountains while the wind streams straight through them.",abilities:["Standing Wave","Stacked Plates"],evo:null},
+  {n:12,slug:"mammatus",name:"Mammatus",latin:"Mamma",cls:"rare",comp:"Water / ice",rarity:"Rare",precip:0,intensity:2,alt:"Under storm anvils",tagline:"The storm's underbelly.",desc:"Rounded pouches sagging from the underside of a thunderstorm's anvil, lit gold at sunset. Usually seen as a severe storm is moving away.",abilities:["Pouches"],evo:null},
+  {n:13,slug:"asperitas",name:"Asperitas",latin:"Asperitas",cls:"rare",comp:"Water droplets",rarity:"Rare",precip:1,intensity:2,alt:"2,000–10,000 ft",tagline:"The sea, overhead.",desc:"A chaotic, wave-tossed underside that looks like the ocean viewed from below. The newest entry in the official atlas — not formally named until 2017.",abilities:["Turbulence"],evo:null},
+  {n:14,slug:"noctilucent",name:"Noctilucent",latin:"Noctilucent",cls:"legend",comp:"Ice on dust",rarity:"Legendary",precip:0,intensity:0,alt:"~250,000 ft · 76 km",tagline:"The highest cloud on Earth.",desc:"Forming at the edge of space, these electric-blue filaments glow long after sunset — lit by sunlight still striking them from below the horizon. Deep-summer twilight only.",abilities:["Night Glow","Mesospheric"],evo:null},
+  {n:15,slug:"nacreous",name:"Nacreous",latin:"Polar stratospheric",cls:"legend",comp:"Ice crystals",rarity:"Legendary",precip:0,intensity:0,alt:"50,000–80,000 ft",tagline:"Mother-of-pearl.",desc:"Rare polar-winter stratosphere clouds that shimmer with iridescent pastels at twilight, like an oil slick made of light.",abilities:["Iridescence"],evo:null},
+  {n:16,slug:"kh",name:"Kelvin–Helmholtz",latin:"Fluctus",cls:"legend",comp:"Water / mixed",rarity:"Legendary",precip:0,intensity:1,alt:"6,500–20,000 ft",tagline:"Frozen surf.",desc:"A row of perfect breaking waves carved into the sky where two air layers slide past each other. Lasts a minute or two at most — all about timing.",abilities:["Wave Shear"],evo:null},
+];
+const CHAINS={storm:[["cumulus","Humilis"],["cumulus","Congestus"],["cumulonimbus","Incus"]],front:[["cirrus","Approach"],["cirrostratus","Veil"],["altostratus","Thicken"],["nimbostratus","Rain"]]};
+const byslug=Object.fromEntries(DEX.map(d=>[d.slug,d]));
+const MAX_PER=24;
+
+/* ---------- storage ---------- */
+const memStore={};
+async function sget(key){
+  if(typeof window==='undefined'||!window.storage) return (key in memStore)?memStore[key]:null;
+  try{const r=await window.storage.get(key);return r?JSON.parse(r.value):null;}
+  catch(e){return (key in memStore)?memStore[key]:null;}
+}
+async function sset(key,val){
+  memStore[key]=val;
+  if(typeof window!=='undefined'&&window.storage){try{await window.storage.set(key,JSON.stringify(val));}catch(e){}}
+}
+async function sdel(key){
+  delete memStore[key];
+  if(typeof window!=='undefined'&&window.storage){try{await window.storage.delete(key);}catch(e){}}
+}
+
+const captures={}; // slug -> [{id,img,stage,ts}]
+const isSpotted=s=>!!(captures[s]&&captures[s].length);
+
+async function loadAll(){
+  const idx=await sget('cap:index')||[];
+  for(const slug of idx){const arr=await sget('cap:'+slug); if(arr&&arr.length) captures[slug]=arr;}
+}
+async function persist(slug){
+  if(captures[slug]&&captures[slug].length) await sset('cap:'+slug,captures[slug]);
+  else await sdel('cap:'+slug);
+  await sset('cap:index',Object.keys(captures).filter(s=>captures[s]&&captures[s].length));
+}
+
+/* ---------- image resize ---------- */
+function resizeImage(file,maxDim=820,quality=0.74){
+  return new Promise((res,rej)=>{
+    const img=new Image(); const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width,h=img.height; const s=Math.min(1,maxDim/Math.max(w,h));
+      w=Math.round(w*s); h=Math.round(h*s);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      try{res(cv.toDataURL('image/jpeg',quality));}catch(e){rej(e);}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('bad image'));}; img.src=url;
+  });
+}
+
+/* ---------- capture wiring ---------- */
+const capInput=document.getElementById('capInput');
+let pendingSlug=null;
+function triggerCapture(slug){pendingSlug=slug; capInput.value=''; capInput.click();}
+capInput.addEventListener('change',async e=>{
+  const files=[...e.target.files]; const slug=pendingSlug; if(!files.length||!slug) return;
+  for(const f of files){
+    if((captures[slug]||[]).length>=MAX_PER) break;
+    try{const img=await resizeImage(f); (captures[slug] ||= []).push({id:Date.now()+'-'+Math.random().toString(36).slice(2,6),img,stage:null,ts:Date.now(),tags:[],shared:false});}catch(err){}
+  }
+  await persist(slug);
+  refreshCard(slug); updateCounters(); renderFeed(); renderZoo();
+  if(scrim.classList.contains('open')) openModal(slug);
+});
+
+/* ---------- portraits ---------- */
+function portraitSVG(d,vb="0 0 320 220"){return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${ART[d.slug](d)}</svg>`;}
+function cardPortrait(d){
+  const caps=captures[d.slug]||[];
+  if(caps.length){
+    const latest=caps[caps.length-1];
+    const badge=caps.length>1?`<span class="multi">×${caps.length}</span>`:'';
+    return `<img class="cap" src="${latest.img}" alt="Your photo of ${d.name}">${badge}`;
+  }
+  return `<span class="illus">${portraitSVG(d)}</span><span class="to-capture">📷 Tap to capture</span>`;
+}
+
+/* ---------- cards ---------- */
+function cardEl(d){
+  const c=CLASSES[d.cls];
+  const btn=document.createElement('button');
+  btn.className='card'+(isSpotted(d.slug)?' spotted':'');
+  btn.style.setProperty('--accent',c.hex);
+  btn.dataset.slug=d.slug; btn.dataset.cls=d.cls;
+  btn.setAttribute('aria-label',`${d.name}, ${c.label} cloud. ${isSpotted(d.slug)?'Spotted.':'Not spotted.'} Open entry.`);
+  btn.innerHTML=`
+    <span class="spot-stamp" aria-hidden="true">${isSpotted(d.slug)?'✓':'📷'}</span>
+    <span class="portrait">${cardPortrait(d)}</span>
+    <span class="body">
+      <span class="num">№ ${String(d.n).padStart(3,'0')}</span>
+      <span class="name">${d.name}</span>
+      <span class="latin">${d.latin}</span>
+      <span class="foot">
+        <span class="pill" style="background:${c.hex}">${c.label}</span>
+        ${d.rarity!=="Common"?`<span class="rare-flag">${d.rarity}</span>`:`<span class="rare-flag" style="color:var(--ink-faint)">${d.comp.split(' ')[0]}</span>`}
+      </span>
+    </span>`;
+  btn.addEventListener('click',()=>openModal(d.slug));
+  return btn;
+}
+function refreshCard(slug){
+  document.querySelectorAll(`.card[data-slug="${slug}"]`).forEach(card=>{
+    const d=byslug[slug];
+    card.classList.toggle('spotted',isSpotted(slug));
+    card.querySelector('.portrait').innerHTML=cardPortrait(d);
+    card.querySelector('.spot-stamp').textContent=isSpotted(slug)?'✓':'📷';
+  });
+}
+function buildBands(){
+  const root=document.getElementById('bands'); root.innerHTML='';
+  BAND_ORDER.forEach(cls=>{
+    const c=CLASSES[cls]; const items=DEX.filter(d=>d.cls===cls);
+    const sec=document.createElement('section'); sec.className='band'; sec.dataset.cls=cls; sec.id='band-'+cls;
+    sec.innerHTML=`<div class="band-head"><span class="tag" style="background:${c.hex}">${c.label}</span><h2>${bandTitle(cls)}</h2><span class="alt">${c.alt}</span></div><div class="grid"></div>`;
+    const grid=sec.querySelector('.grid'); items.forEach(d=>grid.appendChild(cardEl(d)));
+    root.appendChild(sec);
+  });
+}
+
+/* ---------- filters ---------- */
+function buildFilters(){
+  const row=document.getElementById('filters');
+  const all=document.createElement('button'); all.className='chip'; all.textContent='All'; all.setAttribute('aria-pressed','true'); all.dataset.f='all'; row.appendChild(all);
+  BAND_ORDER.forEach(cls=>{const c=CLASSES[cls];const b=document.createElement('button');b.className='chip';b.dataset.f=cls;b.setAttribute('aria-pressed','false');b.innerHTML=`<span class="dot" style="background:${c.hex}"></span>${c.label}`;row.appendChild(b);});
+  row.addEventListener('click',e=>{const chip=e.target.closest('.chip');if(!chip)return;[...row.children].forEach(ch=>ch.setAttribute('aria-pressed',ch===chip?'true':'false'));applyFilter(chip.dataset.f);});
+}
+function applyFilter(f){let any=false;document.querySelectorAll('.band').forEach(sec=>{const show=(f==='all'||sec.dataset.cls===f);sec.style.display=show?'':'none';if(show)any=true;});}
+
+/* ---------- counters ---------- */
+function updateCounters(){
+  const spot=Object.keys(captures).filter(s=>isSpotted(s)).length;
+  const photos=Object.values(captures).reduce((a,arr)=>a+(arr?arr.length:0),0);
+  document.getElementById('count-spot').textContent=spot;
+  document.getElementById('count-photos').textContent=photos;
+  document.getElementById('prog').style.width=(spot/DEX.length*100)+'%';
+}
+
+/* ---------- resemblance tags (the "looks like a bunny" axis) ----------
+   Tags are a SEPARATE lens from genus/stage: they describe what the cloud
+   resembled, never what it meteorologically is. Stored per capture in cap.tags.
+   Privacy: photos are private by default; only cap.shared===true ones reach the
+   Zoo. Re-encoding through <canvas> in resizeImage() already strips EXIF/GPS, so
+   shared photos carry no location metadata. In a real backend, tag text AND image
+   pixels must be moderated server-side (the same vision model that classifies
+   genus can pre-screen) before anything becomes public. */
+const TAG_EMOJI={rabbit:"🐰",dog:"🐶",cat:"🐱",dragon:"🐉",whale:"🐳",bird:"🐦",heart:"❤️",face:"🙂",ghost:"👻",castle:"🏰",mountain:"⛰️",ship:"🚢",tree:"🌳",angel:"😇",dinosaur:"🦕",fish:"🐟"};
+const STARTER_TAGS=Object.keys(TAG_EMOJI);
+const MAX_TAGS=4;
+function normalizeTag(s){return (s||'').toLowerCase().trim().replace(/\s+/g,' ').slice(0,24);}
+function tagEmoji(t){return TAG_EMOJI[t]||'✨';}
+function tagTitle(t){return t.replace(/\b\w/g,m=>m.toUpperCase());}
+function tagLabel(t){return `${tagEmoji(t)} ${tagTitle(t)}`;}
+// light client-side gate only; real moderation is a server concern
+function tagAllowed(t){return t.length>=2 && t.length<=24;}
+
+// seeded contributors so the cross-user Zoo has something to show
+const ZOO_SEED=[
+  {who:"Mara",slug:"cumulus",tags:["rabbit","dog"],ago:"2h ago"},
+  {who:"Devin",slug:"cumulus",tags:["dragon"],ago:"6h ago"},
+  {who:"Priya",slug:"stratocumulus",tags:["whale"],ago:"yesterday"},
+  {who:"Tomás",slug:"cumulonimbus",tags:["castle"],ago:"yesterday"},
+  {who:"Jo",slug:"altocumulus",tags:["fish","face"],ago:"2d ago"},
+  {who:"Wei",slug:"cumulus",tags:["heart"],ago:"3d ago"},
+  {who:"Lena",slug:"cirrus",tags:["bird","angel"],ago:"3d ago"},
+  {who:"Omar",slug:"cumulus",tags:["rabbit"],ago:"4d ago"},
+  {who:"Sky",slug:"lenticular",tags:["ship"],ago:"5d ago"},
+  {who:"Ada",slug:"stratocumulus",tags:["dog","face"],ago:"6d ago"},
+];
+// union of starter + seed + everything the user has typed → typeahead source
+function tagRegistry(){
+  const set=new Set(STARTER_TAGS);
+  ZOO_SEED.forEach(z=>z.tags.forEach(t=>set.add(t)));
+  Object.values(captures).forEach(arr=>arr.forEach(c=>(c.tags||[]).forEach(t=>set.add(t))));
+  return [...set].sort();
+}
+// all shared sightings (seeded contributors + the user's opted-in photos)
+function zooEntries(){
+  const out=ZOO_SEED.map(z=>({...z,you:false,img:null}));
+  for(const slug in captures){
+    (captures[slug]||[]).forEach(c=>{
+      if(c.shared && (c.tags||[]).length) out.push({who:'You',slug,tags:c.tags,ago:'just now',you:true,img:c.img});
+    });
+  }
+  return out;
+}
+
+/* ---------- modal ---------- */
+const scrim=document.getElementById('scrim'); let lastFocus=null;
+let editCap={slug:null,id:null}; // which capture's tag editor is open
+function stageLabels(d){return d.evo?CHAINS[d.evo].map(s=>s[1]):null;}
+function fmtDate(ts){const o=new Date(ts);return o.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
+
+// inline editor for the selected capture: stage, resemblance tags, share toggle
+function capEditor(slug){
+  if(editCap.slug!==slug) return '';
+  const cap=(captures[slug]||[]).find(x=>x.id===editCap.id); if(!cap) return '';
+  const d=byslug[slug]; const stages=stageLabels(d);
+  cap.tags=cap.tags||[];
+  const stageSel=stages?`<div class="ce-row"><span class="ce-lab">Evolution stage</span>
+    <select data-ce-stage>
+      <option value=""${!cap.stage?' selected':''}>—</option>
+      ${stages.map(s=>`<option value="${s}"${cap.stage===s?' selected':''}>${s}</option>`).join('')}
+    </select></div>`:'';
+  const chips=cap.tags.length
+    ? `<div class="tag-chips">${cap.tags.map(t=>`<span class="tag-chip">${tagLabel(t)}<button data-ce-rmtag="${t}" aria-label="Remove ${t}">✕</button></span>`).join('')}</div>`
+    : `<span class="ce-lab" style="opacity:.7">No shapes tagged yet — what did it look like?</span>`;
+  const used=new Set(cap.tags);
+  const suggest=STARTER_TAGS.filter(t=>!used.has(t)).slice(0,8).map(t=>`<button class="tag-s" data-ce-addtag="${t}">${tagLabel(t)}</button>`).join('');
+  const registry=tagRegistry().filter(t=>!used.has(t));
+  const full=cap.tags.length>=MAX_TAGS;
+  return `<div class="cap-editor">
+    <img class="ce-img" src="${cap.img}" alt="">
+    <div class="ce-body">
+      ${stageSel}
+      <div class="ce-row" style="margin-bottom:9px"><span class="ce-lab">Looks like…</span><span class="ce-lab" style="opacity:.6">${cap.tags.length}/${MAX_TAGS}</span></div>
+      ${chips}
+      ${full?'':`<div class="tag-suggest">${suggest}</div>
+      <div class="tag-input-row">
+        <input id="ceTagInput" list="ceTagList" placeholder="Type a shape — dragon, grandpa asleep…" maxlength="24" autocomplete="off">
+        <datalist id="ceTagList">${registry.map(t=>`<option value="${tagTitle(t)}">`).join('')}</datalist>
+        <button class="tag-add" data-ce-commit>Add</button>
+      </div>`}
+      <div class="ce-share">
+        <label><input type="checkbox" data-ce-share ${cap.shared?'checked':''}> Share to Cloud Zoo</label>
+        <span class="priv">${cap.shared?'visible to others':'private · on this device'}</span>
+      </div>
+      <div class="ce-actions">
+        <button class="ce-del" data-ce-del>Remove photo</button>
+        <button class="ce-close" data-ce-close>Done</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function openModal(slug){
+  const d=byslug[slug]; const c=CLASSES[d.cls];
+  lastFocus=lastFocus||document.activeElement;
+  const caps=captures[slug]||[]; const stages=stageLabels(d);
+
+  // hero: latest photo if spotted, else illustration
+  const hero=caps.length?`<img src="${caps[caps.length-1].img}" alt="Your photo of ${d.name}">`:portraitSVG(d,"0 0 320 160");
+
+  // capture gallery
+  let gallery;
+  if(!caps.length){
+    gallery=`<div class="cap-cta">
+      <div class="big">Not spotted yet</div>
+      <p>Find a ${d.name.toLowerCase()} in the sky and photograph it to add it to your codex.</p>
+      <button class="btn-cap" data-cap="${slug}">📷 Capture this cloud</button>
+    </div>`;
+  }else{
+    const sorted=[...caps].sort((a,b)=>{
+      if(stages){const ia=stages.indexOf(a.stage),ib=stages.indexOf(b.stage);if(ia!==ib)return (ia<0?99:ia)-(ib<0?99:ib);}
+      return a.ts-b.ts;
+    });
+    const items=sorted.map(cap=>{
+      const tagCount=(cap.tags||[]).length;
+      const badges=`<div class="cap-badges">${tagCount?`<span class="cap-b">🏷 ${tagCount}</span>`:''}${cap.shared?`<span class="cap-b shared">↗ Zoo</span>`:''}</div>`;
+      const lead=tagCount?`<span style="position:absolute;right:6px;bottom:6px;font-size:14px">${tagEmoji(cap.tags[0])}</span>`:'';
+      return `<div class="cap-item${editCap.slug===slug&&editCap.id===cap.id?' sel':''}" data-edit="${cap.id}" role="button" tabindex="0" aria-label="Edit this photo">
+        <img src="${cap.img}" alt="${d.name} photo">
+        ${badges}
+        <div class="cap-meta"><span>${cap.stage?cap.stage:''}</span><span>${fmtDate(cap.ts)}</span></div>${lead}
+      </div>`;
+    }).join('');
+    gallery=`<div class="cap-grid">${items}<button class="cap-add" data-cap="${slug}">＋<br>Add</button></div>${capEditor(slug)}`;
+  }
+
+  // evolution line (thumbs use your photo if you've caught that stage/species)
+  let evoHTML='';
+  if(d.evo){
+    const chain=CHAINS[d.evo];
+    evoHTML=`<div class="sec-h">Evolution line</div><div class="evo">`+chain.map((step,i)=>{
+      const sd=byslug[step[0]]; const cur=sd.slug===d.slug;
+      // prefer a user photo tagged with this stage, else any photo of that species, else art
+      let thumb=`<span class="illus">${portraitSVG(sd,'40 30 240 160')}</span>`;
+      const sCaps=captures[sd.slug]||[];
+      const tagged=sCaps.find(x=>x.stage===step[1])||sCaps[sCaps.length-1];
+      if(tagged) thumb=`<img src="${tagged.img}" alt="">`;
+      const stepHTML=`<div class="step ${cur?'cur':''}" data-go="${sd.slug}" style="--accent:${CLASSES[sd.cls].hex}" role="button" tabindex="0" aria-label="${sd.name}, ${step[1]} stage"><span class="thumb">${thumb}</span><div class="sn">${sd.name}</div><div class="ss">${step[1]}</div></div>`;
+      return stepHTML+(i<chain.length-1?`<div class="arrow">→</div>`:'');
+    }).join('')+`</div>`;
+  }
+
+  document.getElementById('modalContent').innerHTML=`
+    <div class="m-hero">${hero}</div>
+    <div class="m-body" style="--accent:${c.hex}">
+      <div class="m-num">№ ${String(d.n).padStart(3,'0')} · ${c.label} Cloud</div>
+      <div class="m-name" id="m-name">${d.name}</div>
+      <div class="m-latin">${d.latin}</div>
+      <div class="m-tags">
+        <span class="pill" style="background:${c.hex}">${c.label}</span>
+        <span class="a" style="border-radius:999px;padding:5px 11px">${d.rarity}</span>
+        ${caps.length?`<span class="a" style="border-radius:999px;padding:5px 11px;color:var(--catch);border-color:var(--catch)">✓ Spotted ×${caps.length}</span>`:''}
+      </div>
+      <p class="m-desc"><b style="font-family:var(--display);font-weight:600">${d.tagline}</b> ${d.desc}</p>
+      <div class="stats">
+        <div class="stat"><div class="lab">Altitude <span>${d.alt}</span></div></div>
+        <div class="stat"><div class="lab">Composition <span>${d.comp}</span></div></div>
+        <div class="stat"><div class="lab">Precipitation <span>${d.precip}/5</span></div><div class="meter"><i style="width:${d.precip/5*100}%"></i></div></div>
+        <div class="stat"><div class="lab">Intensity <span>${d.intensity}/5</span></div><div class="meter"><i style="width:${d.intensity/5*100}%"></i></div></div>
+      </div>
+      <div class="sec-h"><span>Your sightings${caps.length?' ('+caps.length+') · tap a photo to tag what it looks like':''}</span>${caps.length?`<button class="btn-cap ghost" data-cap="${slug}" style="padding:7px 13px">📷 Capture more</button>`:''}</div>
+      ${gallery}
+      <div class="sec-h">Features &amp; moves</div>
+      <div class="abil">${d.abilities.map(a=>`<span class="a">${a}</span>`).join('')}</div>
+      ${evoHTML}
+    </div>`;
+
+  // wire capture buttons
+  document.querySelectorAll('[data-cap]').forEach(b=>b.addEventListener('click',()=>triggerCapture(b.dataset.cap)));
+  // select a thumbnail → open its editor
+  document.querySelectorAll('[data-edit]').forEach(b=>{
+    const open=()=>{editCap={slug,id:b.dataset.edit}; openModal(slug);
+      requestAnimationFrame(()=>{const ed=document.querySelector('.cap-editor'); if(ed) ed.scrollIntoView({behavior:'smooth',block:'nearest'});});};
+    b.addEventListener('click',open);
+    b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+  });
+  // editor: stage select
+  const stg=document.querySelector('[data-ce-stage]');
+  if(stg) stg.addEventListener('change',async()=>{const cap=(captures[slug]||[]).find(x=>x.id===editCap.id);if(cap){cap.stage=stg.value||null;await persist(slug);refreshCard(slug);openModal(slug);}});
+  // editor: add tag from input
+  async function commitTag(val){
+    const cap=(captures[slug]||[]).find(x=>x.id===editCap.id); if(!cap) return;
+    const t=normalizeTag(val);
+    if(!t||!tagAllowed(t)||cap.tags.includes(t)||cap.tags.length>=MAX_TAGS) return;
+    cap.tags.push(t); await persist(slug); refreshCard(slug); renderZoo(); openModal(slug);
+  }
+  const inp=document.getElementById('ceTagInput'); const commitBtn=document.querySelector('[data-ce-commit]');
+  if(commitBtn) commitBtn.addEventListener('click',()=>commitTag(inp?inp.value:''));
+  if(inp) inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();commitTag(inp.value);}});
+  // editor: quick-add starter chips
+  document.querySelectorAll('[data-ce-addtag]').forEach(b=>b.addEventListener('click',()=>commitTag(b.dataset.ceAddtag)));
+  // editor: remove tag
+  document.querySelectorAll('[data-ce-rmtag]').forEach(b=>b.addEventListener('click',async()=>{
+    const cap=(captures[slug]||[]).find(x=>x.id===editCap.id); if(!cap) return;
+    cap.tags=cap.tags.filter(t=>t!==b.dataset.ceRmtag); await persist(slug); refreshCard(slug); renderZoo(); openModal(slug);
+  }));
+  // editor: share toggle (opt-in)
+  const sh=document.querySelector('[data-ce-share]');
+  if(sh) sh.addEventListener('change',async()=>{const cap=(captures[slug]||[]).find(x=>x.id===editCap.id);if(cap){cap.shared=sh.checked;await persist(slug);renderZoo();openModal(slug);}});
+  // editor: delete (two-tap)
+  const del=document.querySelector('[data-ce-del]');
+  if(del) del.addEventListener('click',async()=>{
+    if(del.classList.contains('arm')){
+      captures[slug]=(captures[slug]||[]).filter(x=>x.id!==editCap.id); editCap={slug:null,id:null};
+      await persist(slug); refreshCard(slug); updateCounters(); renderFeed(); renderZoo(); openModal(slug);
+    }else{del.classList.add('arm'); del.textContent='Tap again to remove'; setTimeout(()=>{del.classList.remove('arm');del.textContent='Remove photo';},2500);}
+  });
+  // editor: close
+  const cl=document.querySelector('[data-ce-close]');
+  if(cl) cl.addEventListener('click',()=>{editCap={slug:null,id:null};openModal(slug);});
+  // wire evo navigation
+  document.querySelectorAll('.evo .step').forEach(s=>{
+    const go=()=>{editCap={slug:null,id:null}; openModal(s.dataset.go);};
+    s.addEventListener('click',go);
+    s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+
+  scrim.classList.add('open'); document.body.style.overflow='hidden';
+  document.getElementById('closeBtn').focus();
+}
+function closeModal(){scrim.classList.remove('open');document.body.style.overflow='';editCap={slug:null,id:null};if(lastFocus){lastFocus.focus();lastFocus=null;}}
+document.getElementById('closeBtn').addEventListener('click',closeModal);
+scrim.addEventListener('click',e=>{if(e.target===scrim)closeModal();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&scrim.classList.contains('open'))closeModal();});
+
+/* ---------- community feed ---------- */
+const AV=["#204794","#3f95b2","#2f784c","#7361e7","#935ec3","#a35170","#a06921"];
+const FRIENDS=[
+  {who:"Mara",slug:"cumulonimbus",stage:"Incus",ago:"2h ago"},
+  {who:"Devin",slug:"lenticular",stage:null,ago:"5h ago"},
+  {who:"Priya",slug:"mammatus",stage:null,ago:"yesterday"},
+  {who:"Tomás",slug:"noctilucent",stage:null,ago:"2d ago"},
+  {who:"Jo",slug:"cirrus",stage:"Approach",ago:"3d ago"},
+  {who:"Wei",slug:"kh",stage:null,ago:"4d ago"},
+];
+function feedCard({who,slug,stage,ago,img,you}){
+  const d=byslug[slug]; const c=CLASSES[d.cls];
+  const init=who[0].toUpperCase(); const color=you?'var(--catch)':AV[(who.charCodeAt(0))%AV.length];
+  const pic=img?`<img src="${img}" alt="">`:portraitSVG(d,"0 0 320 240");
+  const el=document.createElement('div'); el.className='fcard';
+  el.innerHTML=`<div class="fimg">${pic}</div><div class="fb">
+    <div class="who"><span class="avatar" style="background:${color}">${init}</span><span class="wn">${you?'You':who}</span></div>
+    <div class="cn">${d.name}</div>
+    <div class="meta">${stage?stage+' · ':''}${ago}</div></div>`;
+  el.addEventListener('click',()=>openModal(slug));
+  return el;
+}
+function renderFeed(){
+  const feed=document.getElementById('feed'); feed.innerHTML='';
+  // your latest catch first
+  let mine=null,mts=-1;
+  for(const slug in captures){const arr=captures[slug]; if(arr&&arr.length){const last=arr[arr.length-1]; if(last.ts>mts){mts=last.ts; mine={who:'You',slug,stage:last.stage,ago:'just now',img:last.img,you:true};}}}
+  if(mine) feed.appendChild(feedCard(mine));
+  FRIENDS.forEach(f=>feed.appendChild(feedCard(f)));
+}
+
+/* ---------- cloud zoo (browse by resemblance) ---------- */
+let zooFilter=null; // active tag, or null = all
+function renderZoo(){
+  const entries=zooEntries();
+  // trending: tag → count across all shared sightings
+  const counts={};
+  entries.forEach(e=>e.tags.forEach(t=>counts[t]=(counts[t]||0)+1));
+  const ranked=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  if(zooFilter && !counts[zooFilter]) zooFilter=null; // tag no longer exists
+
+  const trend=document.getElementById('trend');
+  trend.innerHTML=`<button class="trend-chip" data-tag="" aria-pressed="${zooFilter===null}">All shapes <span class="cnt">${entries.length}</span></button>`+
+    ranked.slice(0,12).map(t=>`<button class="trend-chip" data-tag="${t}" aria-pressed="${zooFilter===t}">${tagLabel(t)} <span class="cnt">${counts[t]}</span></button>`).join('');
+  trend.querySelectorAll('.trend-chip').forEach(c=>c.addEventListener('click',()=>{zooFilter=c.dataset.tag||null; renderZoo();}));
+
+  const grid=document.getElementById('zooGrid');
+  const shown=entries.filter(e=>!zooFilter||e.tags.includes(zooFilter));
+  if(!shown.length){grid.innerHTML=`<div class="zoo-empty">No one's shared a ${zooFilter?tagTitle(zooFilter):'shape'} yet — tag one of your photos and share it to start.</div>`;return;}
+  grid.innerHTML='';
+  shown.forEach(e=>{
+    const d=byslug[e.slug]; const init=e.who[0].toUpperCase();
+    const color=e.you?'var(--catch)':AV[e.who.charCodeAt(0)%AV.length];
+    const headTag=zooFilter&&e.tags.includes(zooFilter)?zooFilter:e.tags[0];
+    const pic=e.img?`<img src="${e.img}" alt="">`:portraitSVG(d,"0 0 320 240");
+    const card=document.createElement('div'); card.className='zcard';
+    card.innerHTML=`<div class="zimg">${pic}<span class="ztag">${tagLabel(headTag)}</span></div>
+      <div class="zb"><div class="zwho"><span class="avatar" style="background:${color}">${init}</span><span class="zwn">${e.who}</span></div>
+      <div class="zmeta">${d.name} · ${e.ago}</div></div>`;
+    card.addEventListener('click',()=>openModal(e.slug));
+    grid.appendChild(card);
+  });
+}
+
+/* ---------- sky now (TWC current conditions) ----------
+   GOING LIVE: point WEATHER.endpoint at a small backend proxy that holds your TWC
+   apiKey and calls, server-side:
+     GET https://api.weather.com/v3/wx/observations/current
+         ?geocode=LAT,LON&units=e&format=json&apiKey=YOUR_KEY
+   returning the raw TWC JSON. Two reasons it must be a proxy, not a direct browser fetch:
+   (1) api.weather.com does not send CORS headers for arbitrary web origins, and
+   (2) the apiKey must never ship in client code. Field names below follow the
+   Standard package (references/standard.md) — confirm against your contract. */
+const WEATHER={ mode:'demo', endpoint:'', units:'e' };  // mode: 'demo' | 'live'
+
+function mapTWC(obs){
+  return {
+    phrase: obs.cloudCoverPhrase || obs.wxPhraseShort || obs.wxPhraseLong || '—',
+    conditions: obs.wxPhraseLong || obs.wxPhraseShort || '',
+    temp: obs.temperature, feels: obs.temperatureFeelsLike,
+    ceiling: obs.cloudCeiling,          // ft when units=e; null = clear / unlimited
+    humidity: obs.relativeHumidity,
+    day: (obs.dayOrNight || 'D') === 'D',
+    units: WEATHER.units,
+  };
+}
+function getCoords(){
+  if(!('geolocation' in navigator)) return Promise.resolve(null);
+  return new Promise(res=>{
+    let done=false; const fin=v=>{if(!done){done=true;res(v);}};
+    const t=setTimeout(()=>fin(null),6000);
+    navigator.geolocation.getCurrentPosition(
+      p=>{clearTimeout(t);fin({lat:p.coords.latitude,lon:p.coords.longitude});},
+      ()=>{clearTimeout(t);fin(null);}, {timeout:6000,maximumAge:600000});
+  });
+}
+function demoWeather(coords){
+  const h=new Date().getHours(); const day=h>=6&&h<20;
+  const presets=[
+    {phrase:'Partly Cloudy',conditions:'Fair-weather cumulus drifting through.',temp:day?74:61,feels:day?76:60,ceiling:4500,humidity:52,day,units:WEATHER.units},
+    {phrase:'Mostly Cloudy',conditions:'A broken stratocumulus deck overhead.',temp:day?66:57,feels:day?66:55,ceiling:3200,humidity:68,day,units:WEATHER.units},
+    {phrase:'Fair',conditions:'High cirrus streaming in from the west.',temp:day?79:64,feels:day?81:63,ceiling:null,humidity:40,day,units:WEATHER.units},
+    {phrase:'Cloudy',conditions:'Thick altostratus — rain possible later.',temp:day?59:54,feels:day?58:52,ceiling:9000,humidity:77,day,units:WEATHER.units},
+  ];
+  const i=coords? Math.abs(Math.round(coords.lat+coords.lon))%presets.length : (day?0:1);
+  return presets[i];
+}
+async function loadWeather(coords){
+  if(WEATHER.mode==='live' && WEATHER.endpoint){
+    try{
+      const u=`${WEATHER.endpoint}?geocode=${coords.lat},${coords.lon}&units=${WEATHER.units}&format=json`;
+      const r=await fetch(u); const j=await r.json();
+      const obs=Array.isArray(j)?j[0]:(j.observation||j);
+      return mapTWC(obs);
+    }catch(e){ /* fall through to demo */ }
+  }
+  return demoWeather(coords);
+}
+function bandsForCeiling(w){
+  if(w.ceiling==null && /clear|fair|sunny/i.test(w.phrase)) return ['high'];
+  if(w.ceiling==null) return ['high','mid'];
+  if(w.ceiling<6500) return ['low'];
+  if(w.ceiling<=20000) return ['mid','low'];
+  return ['high'];
+}
+function renderSkyNow(place,w,coords,note){
+  const el=document.getElementById('skyNow');
+  const likely=bandsForCeiling(w);
+  const u=w.units==='m'?'°C':'°F';
+  const ceil = w.ceiling==null ? 'Unlimited' : `${Number(w.ceiling).toLocaleString()} ft`;
+  const chips=BAND_ORDER.map(c=>`<span class="snow-band${likely.includes(c)?' on':''}" data-band="${c}" style="--accent:${CLASSES[c].hex}" role="button" tabindex="0">${CLASSES[c].label}</span>`).join('');
+  const tail = note ? `<span class="snow-note">${note}</span>`
+    : (WEATHER.mode==='demo' ? '<span class="snow-demo">sample conditions · wire a TWC proxy for live data</span>' : '');
+  el.innerHTML=`
+    <div class="snow-main">
+      <div class="snow-left">
+        <div class="snow-place">${place} <button id="locBtn" class="snow-loc">📍 ${coords?'Update':'Use my location'}</button></div>
+        <div class="snow-now"><span class="snow-temp">${w.temp!=null?Math.round(w.temp)+u:'—'}</span><span class="snow-phrase">${w.phrase}</span></div>
+        <div class="snow-cond">${w.conditions||''}</div>
+      </div>
+      <div class="snow-stats">
+        <div><span>Cloud ceiling</span><b>${ceil}</b></div>
+        <div><span>Feels like</span><b>${w.feels!=null?Math.round(w.feels)+u:'—'}</b></div>
+        <div><span>Humidity</span><b>${w.humidity!=null?w.humidity+'%':'—'}</b></div>
+        <div><span>Sky</span><b>${w.day?'Daylight':'Night'}</b></div>
+      </div>
+    </div>
+    <div class="snow-outlook">
+      <span class="snow-ol-lab">Likely overhead now</span>
+      <div class="snow-bandrow">${chips}</div>
+      ${tail}
+    </div>`;
+  el.querySelectorAll('.snow-band').forEach(b=>{
+    const go=()=>{const s=document.getElementById('band-'+b.dataset.band); if(s) s.scrollIntoView({behavior:'smooth',block:'start'});};
+    b.addEventListener('click',go);
+    b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+  const lb=document.getElementById('locBtn'); if(lb) lb.addEventListener('click',useMyLocation);
+}
+async function useMyLocation(){
+  const el=document.getElementById('skyNow'); el.classList.add('loading');
+  const coords=await getCoords(); el.classList.remove('loading');
+  if(!coords){
+    renderSkyNow('Sample sky', await loadWeather({lat:33.74,lon:-84.39}), null,
+      'Location access is blocked in this preview — works once embedded with location permission.');
+    return;
+  }
+  renderSkyNow(`${coords.lat.toFixed(2)}, ${coords.lon.toFixed(2)}`, await loadWeather(coords), coords, null);
+  buildOutlook(coords);
+}
+function bootSkyNow(){ renderSkyNow('Sample sky', demoWeather(null), null, null); }
+
+/* ---------- spotting outlook (TWC hourly forecast, 48h) ----------
+   GOING LIVE: set WEATHER.forecastEndpoint to a proxy that calls, server-side:
+     GET https://api.weather.com/v3/wx/forecast/hourly/2day
+         ?geocode=LAT,LON&units=e&format=json&apiKey=YOUR_KEY
+   TWC hourly responses are COLUMNAR — parallel arrays indexed by hour
+   (cloudCover[], precipChance[], temperature[], dayOrNight[], validTimeLocal[]).
+   We sample five day-part windows from those arrays. Confirm field names against
+   references/standard.md for your contract. */
+function presetIndex(coords){const h=new Date().getHours();const day=h>=6&&h<20;return coords?Math.abs(Math.round(coords.lat+coords.lon))%4:(day?0:1);}
+const OFFSETS=[2,6,11,20,27]; // hours from now
+
+function dayPart(h){ if(h<5)return'Overnight'; if(h<12)return'Morning'; if(h<17)return'Afternoon'; if(h<21)return'Evening'; return'Overnight'; }
+function dayWord(d){const t=new Date();const a=new Date(t.getFullYear(),t.getMonth(),t.getDate());const b=new Date(d.getFullYear(),d.getMonth(),d.getDate());const diff=Math.round((b-a)/86400000);if(diff<=0)return'Today';if(diff===1)return'Tomorrow';return d.toLocaleDateString(undefined,{weekday:'short'});}
+const periodLabel=d=>`${dayWord(d)} ${dayPart(d.getHours())}`;
+
+function demoForecast(coords){
+  const i=presetIndex(coords);
+  // [cover%, precip%] arcs per scenario, aligned with the header's demo presets
+  const arcs=[
+    [[45,10],[32,5],[18,0],[38,5],[58,35]],   // 0 fair-weather cumulus, building late
+    [[80,15],[72,10],[58,10],[40,5],[24,0]],  // 1 low overcast clearing
+    [[18,0],[42,0],[66,10],[86,45],[92,70]],  // 2 high cirrus -> warm front -> rain
+    [[85,40],[90,65],[95,80],[78,45],[52,18]],// 3 frontal rain, clearing behind
+  ][i];
+  const baseTemp=[72,62,78,58][i];
+  const now=Date.now();
+  return arcs.map(([cover,precip],k)=>{
+    const when=new Date(now+OFFSETS[k]*3600e3); const h=when.getHours();
+    return {when,cover,precip,day:h>=6&&h<20,temp:Math.round(baseTemp+(h>=11&&h<18?4:-3)-k)};
+  });
+}
+async function loadForecast(coords){
+  if(WEATHER.mode==='live' && WEATHER.forecastEndpoint){
+    try{
+      const u=`${WEATHER.forecastEndpoint}?geocode=${coords.lat},${coords.lon}&units=${WEATHER.units}&format=json`;
+      const r=await fetch(u); const j=await r.json();
+      const cover=j.cloudCover||[], precip=j.precipChance||[], temp=j.temperature||[],
+            don=j.dayOrNight||[], times=j.validTimeLocal||[];
+      if(cover.length){
+        return OFFSETS.map(off=>{
+          const idx=Math.min(off,cover.length-1);
+          const when=times[idx]?new Date(times[idx]):new Date(Date.now()+off*3600e3);
+          return {when,cover:cover[idx]??0,precip:precip[idx]??0,temp:temp[idx],day:(don[idx]||'D')==='D'};
+        });
+      }
+    }catch(e){ /* fall through to demo */ }
+  }
+  return demoForecast(coords);
+}
+
+function frontStage(cover){ if(cover<30)return['cirrus','cirrostratus']; if(cover<55)return['cirrostratus','altostratus']; return['altostratus','nimbostratus']; }
+function classifyPeriod(p,arr,i){
+  const next=arr[i+1]; const rising=next?next.cover-p.cover:0;
+  if(p.day && p.precip>=45 && p.cover>=50) return {tone:'storm',favored:['cumulonimbus','cumulus'],note:'Warm air and rising cloud — a cumulus-into-cumulonimbus window.'};
+  if(p.precip>=45 && p.cover>=80) return {tone:'wet',favored:['nimbostratus','altostratus'],note:'Overcast and wet — nimbostratus territory.'};
+  if(rising>=18 && p.cover<82) return {tone:'front',favored:frontStage(p.cover),note:'Cloud thickening ahead of a front — watch the cirrus-to-rain sequence.'};
+  if(p.cover<25) return p.day?{tone:'clear',favored:['cirrus','cirrocumulus'],note:'Mostly clear — scan high for wispy cirrus.'}:{tone:'clear',favored:[],note:'Clear overnight — tough spotting; try again at dawn.'};
+  if(p.cover<=60) return p.day?{tone:'fair',favored:['cumulus','stratocumulus'],note:'Scattered fair-weather cumulus likely.'}:{tone:'fair',favored:['stratus'],note:'Low cloud or patchy fog overnight.'};
+  return {tone:'cloudy',favored:['stratocumulus','altostratus'],note:'A featureless deck — stratocumulus or altostratus.'};
+}
+const TONE_HEX={storm:'#7361e7',front:'#3f95b2',wet:'#3a61cc',clear:'#a06921',fair:'#607987',cloudy:'#8d8d8d'};
+
+function outlookHeadline(periods,classed){
+  const find=t=>classed.findIndex(c=>c.tone===t);
+  const s=find('storm'),f=find('front'),w=find('wet');
+  if(s>=0) return `<b>Storm potential ${periods[s].label.toLowerCase()}.</b> Rising, warming cloud points to a cumulus-into-cumulonimbus window — the most dramatic catch on the board, from a safe distance.`;
+  if(f>=0) return `<b>A warm front looks to move in by ${periods[f].label.toLowerCase()}.</b> The sky should run its evolution line: cirrus first, then a cirrostratus veil, thickening through altostratus to nimbostratus rain.`;
+  if(w>=0) return `<b>Wet and overcast ${periods[w].label.toLowerCase()}.</b> Mostly nimbostratus — not glamorous, but a clean tick for the codex.`;
+  return `<b>Quiet skies for the next couple of days.</b> Best bet is scanning high for wispy cirrus, with fair-weather cumulus bubbling up in the afternoon warmth.`;
+}
+
+async function buildOutlook(coords){
+  const el=document.getElementById('outlook');
+  const periods=await loadForecast(coords);
+  periods.forEach(p=>p.label=periodLabel(p.when));
+  const classed=periods.map((p,i)=>classifyPeriod(p,periods,i));
+  const cards=periods.map((p,i)=>{
+    const cl=classed[i]; const accent=TONE_HEX[cl.tone]||'#9aa6b6';
+    const lead=cl.favored[0]?byslug[cl.favored[0]]:null;
+    const vis=lead?portraitSVG(lead,'0 0 320 150'):`<svg viewBox="0 0 320 150"><rect width="320" height="150" fill="#0a0e22"/></svg>`;
+    const chips=cl.favored.map(s=>{const d=byslug[s];return `<span class="ol-chip" data-go="${s}" style="--accent:${CLASSES[d.cls].hex}">${d.name}</span>`;}).join('');
+    return `<div class="ol-card" style="--accent:${accent}">
+      <div class="ol-vis">${vis}<span class="ol-cover">${Math.round(p.cover)}%</span></div>
+      <div class="ol-b">
+        <div class="ol-when">${dayWord(p.when)}</div>
+        <div class="ol-label">${dayPart(p.when.getHours())}</div>
+        <div class="ol-note">${cl.note}</div>
+        <div class="ol-chips">${chips}</div>
+      </div></div>`;
+  }).join('');
+  el.innerHTML=`
+    <div class="outlook-head"><h3>Spotting outlook</h3><span class="hz">Next 48 hours · TWC hourly</span></div>
+    <p class="outlook-line">${outlookHeadline(periods,classed)}</p>
+    <div class="ol-row">${cards}</div>`;
+  el.querySelectorAll('.ol-chip').forEach(c=>c.addEventListener('click',()=>openModal(c.dataset.go)));
+}
+function bootOutlook(){ buildOutlook(null); }
+
+/* ---------- boot ---------- */
+(async function(){
+  document.getElementById('count-total').textContent=DEX.length;
+  buildFilters(); buildBands(); renderFeed(); renderZoo(); bootSkyNow(); bootOutlook();
+  await loadAll();
+  buildBands(); renderFeed(); renderZoo(); updateCounters();
+})();
+</script>
