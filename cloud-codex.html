@@ -376,8 +376,105 @@ const DEX=[
   {n:15,slug:"nacreous",name:"Nacreous",latin:"Polar stratospheric",cls:"legend",comp:"Ice crystals",rarity:"Legendary",precip:0,intensity:0,alt:"50,000–80,000 ft",tagline:"Mother-of-pearl.",desc:"Rare polar-winter stratosphere clouds that shimmer with iridescent pastels at twilight, like an oil slick made of light.",abilities:["Iridescence"],evo:null},
   {n:16,slug:"kh",name:"Kelvin–Helmholtz",latin:"Fluctus",cls:"legend",comp:"Water / mixed",rarity:"Legendary",precip:0,intensity:1,alt:"6,500–20,000 ft",tagline:"Frozen surf.",desc:"A row of perfect breaking waves carved into the sky where two air layers slide past each other. Lasts a minute or two at most — all about timing.",abilities:["Wave Shear"],evo:null},
 ];
-/* Reference photos, keyed by slug: {src, credit, license, href}. Empty = use the illustration. */
-const PHOTOS={};
+/* Reference photos from Wikimedia Commons, keyed by slug (credits in photos/CREDITS.md). A missing entry falls back to the illustration. */
+const PHOTOS={
+ "cirrus": {
+  "src": "photos/cirrus.jpg",
+  "credit": "PiccoloNamek",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:CirrusField-color.jpg"
+ },
+ "cirrocumulus": {
+  "src": "photos/cirrocumulus.jpg",
+  "credit": "Nordelch",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Cirrocumulus_20040830.jpg"
+ },
+ "cirrostratus": {
+  "src": "photos/cirrostratus.jpg",
+  "credit": "Rollcloud",
+  "license": "CC BY 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Sun_halo_cirrostratus.jpg"
+ },
+ "altocumulus": {
+  "src": "photos/altocumulus.jpg",
+  "credit": "Bidgee",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Altocumulus.jpg"
+ },
+ "altostratus": {
+  "src": "photos/altostratus.jpg",
+  "credit": "LivingShadow",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Sun_through_Altostratus.JPG"
+ },
+ "nimbostratus": {
+  "src": "photos/nimbostratus.jpg",
+  "credit": "Simon A. Eugster",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Nimbostratus_virga_grey_with_hills.jpg"
+ },
+ "stratus": {
+  "src": "photos/stratus.jpg",
+  "credit": "Rollcloud",
+  "license": "CC BY 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Stratus_nebulosus_opacus_nimbostratogenitus_(19122021).jpg"
+ },
+ "stratocumulus": {
+  "src": "photos/stratocumulus.jpg",
+  "credit": "GerritR",
+  "license": "CC BY-SA 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Stratocumulus_radiatus_bei_Limburg.jpg"
+ },
+ "cumulus": {
+  "src": "photos/cumulus.jpg",
+  "credit": "PiccoloNamek",
+  "license": "CC BY-SA 3.0",
+  "href": "https://commons.wikimedia.org/wiki/File:GoldenMedows.jpg"
+ },
+ "cumulonimbus": {
+  "src": "photos/cumulonimbus.jpg",
+  "credit": "Kamil Nowacki",
+  "license": "CC BY-SA 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Cumulonimbus_incus_over_Warsaw,_Poland.jpg"
+ },
+ "lenticular": {
+  "src": "photos/lenticular.jpg",
+  "credit": "Omnisource5",
+  "license": "CC BY-SA 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Lenticular_Cloud_over_Harold%27s_Cross_Dublin_Ireland_30-6-15.jpg"
+ },
+ "mammatus": {
+  "src": "photos/mammatus.jpg",
+  "credit": "Anton Yankovyi",
+  "license": "CC BY-SA 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Mammatus_clouds_in_the_Nepal_Himalayas.jpg"
+ },
+ "asperitas": {
+  "src": "photos/asperitas.jpg",
+  "credit": "Joshua Kitchens",
+  "license": "Public domain",
+  "href": "https://commons.wikimedia.org/wiki/File:Asperitas_clouds_over_Dayton,_Ohio_on_October_21,_2023.jpg"
+ },
+ "noctilucent": {
+  "src": "photos/noctilucent.jpg",
+  "credit": "Matthias Süßen",
+  "license": "CC BY-SA 4.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Noctilucent-clouds-msu-6817.jpg"
+ },
+ "nacreous": {
+  "src": "photos/nacreous.jpg",
+  "credit": "Alan Light",
+  "license": "CC BY 2.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Nacreous_clouds_Antarctica.jpg"
+ },
+ "kh": {
+  "src": "photos/kh.jpg",
+  "credit": "Astronautilus",
+  "license": "CC BY 2.0",
+  "href": "https://commons.wikimedia.org/wiki/File:Kelvin-Helmholtz_waves.jpg"
+ }
+};
 const CHAINS={storm:[["cumulus","Humilis"],["cumulus","Congestus"],["cumulonimbus","Incus"]],front:[["cirrus","Approach"],["cirrostratus","Veil"],["altostratus","Thicken"],["nimbostratus","Rain"]]};
 const byslug=Object.fromEntries(DEX.map(d=>[d.slug,d]));
 const MAX_PER=24;
