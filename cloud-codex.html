@@ -131,6 +131,8 @@
   .m-hero{width:100%;aspect-ratio:16/8;display:block;background:#0a0e22;position:relative;overflow:hidden}
   .m-hero svg,.m-hero img{width:100%;height:100%}
   .m-hero img{object-fit:cover}
+  .m-credit{position:absolute;right:8px;bottom:6px;font-size:10px;line-height:1.3;color:#fff;background:rgba(0,0,0,.45);padding:2px 7px;border-radius:999px;text-decoration:none;max-width:80%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-credit:hover{background:rgba(0,0,0,.7)}
   .m-body{padding:24px 28px 30px}
   .m-num{font-size:12px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase}
   .m-name{font-weight:800;font-size:36px;line-height:1;margin:8px 0 2px;letter-spacing:-.03em}
@@ -449,7 +451,8 @@ function portraitSVG(d,vb="0 0 320 220"){
   if(!ph) return artSVG(d,vb);
   return `<img class="ref" src="${ph.src}" alt="${d.name} cloud" loading="lazy" data-slug="${d.slug}" data-vb="${vb}" onerror="photoFallback(this)">`;
 }
-function photoFallback(img){img.outerHTML=artSVG(byslug[img.dataset.slug],img.dataset.vb);}
+function photoCredit(ph){return `<a class="m-credit" href="${ph.href}" target="_blank" rel="noopener">Photo: ${ph.credit} · ${ph.license}</a>`;}
+function photoFallback(img){const c=img.parentNode&&img.parentNode.querySelector(".m-credit"); if(c) c.remove(); img.outerHTML=artSVG(byslug[img.dataset.slug],img.dataset.vb);}
 function cardPortrait(d){
   const caps=captures[d.slug]||[];
   if(caps.length){
@@ -668,7 +671,7 @@ function openModal(slug){
   }
 
   document.getElementById('modalContent').innerHTML=`
-    <div class="m-hero">${hero}</div>
+    <div class="m-hero">${hero}${!caps.length&&PHOTOS[slug]?photoCredit(PHOTOS[slug]):''}</div>
     <div class="m-body" style="--accent:${c.hex}">
       <div class="m-num">№ ${String(d.n).padStart(3,'0')} · ${c.label} Cloud</div>
       <div class="m-name" id="m-name">${d.name}</div>
