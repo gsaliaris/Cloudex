@@ -106,6 +106,7 @@
   .card:focus-visible{outline:2px solid var(--accent,var(--accent-blue));outline-offset:3px}
   .card .portrait{aspect-ratio:16/11;width:100%;display:block;background:#0a0e22;position:relative;overflow:hidden}
   .card .portrait svg{width:100%;height:100%;display:block}
+  img.ref{width:100%;height:100%;object-fit:cover;display:block}
   .card .portrait img.cap{width:100%;height:100%;object-fit:cover;display:block}
   .card:not(.spotted) .portrait .illus{filter:grayscale(.4) brightness(.82)}
   .card .to-capture{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px;justify-content:center;padding:7px;font-size:9.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:linear-gradient(180deg,transparent,rgba(6,9,20,.82))}
@@ -373,6 +374,8 @@ const DEX=[
   {n:15,slug:"nacreous",name:"Nacreous",latin:"Polar stratospheric",cls:"legend",comp:"Ice crystals",rarity:"Legendary",precip:0,intensity:0,alt:"50,000–80,000 ft",tagline:"Mother-of-pearl.",desc:"Rare polar-winter stratosphere clouds that shimmer with iridescent pastels at twilight, like an oil slick made of light.",abilities:["Iridescence"],evo:null},
   {n:16,slug:"kh",name:"Kelvin–Helmholtz",latin:"Fluctus",cls:"legend",comp:"Water / mixed",rarity:"Legendary",precip:0,intensity:1,alt:"6,500–20,000 ft",tagline:"Frozen surf.",desc:"A row of perfect breaking waves carved into the sky where two air layers slide past each other. Lasts a minute or two at most — all about timing.",abilities:["Wave Shear"],evo:null},
 ];
+/* Reference photos, keyed by slug: {src, credit, license, href}. Empty = use the illustration. */
+const PHOTOS={};
 const CHAINS={storm:[["cumulus","Humilis"],["cumulus","Congestus"],["cumulonimbus","Incus"]],front:[["cirrus","Approach"],["cirrostratus","Veil"],["altostratus","Thicken"],["nimbostratus","Rain"]]};
 const byslug=Object.fromEntries(DEX.map(d=>[d.slug,d]));
 const MAX_PER=24;
@@ -438,7 +441,15 @@ capInput.addEventListener('change',async e=>{
 });
 
 /* ---------- portraits ---------- */
-function portraitSVG(d,vb="0 0 320 220"){return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${ART[d.slug](d)}</svg>`;}
+function artSVG(d,vb="0 0 320 220"){return `<svg viewBox="${vb}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">${ART[d.slug](d)}</svg>`;}
+// Reference photo when one is set in PHOTOS, otherwise the illustration.
+// If the photo fails to load, it swaps itself back to the illustration.
+function portraitSVG(d,vb="0 0 320 220"){
+  const ph=PHOTOS[d.slug];
+  if(!ph) return artSVG(d,vb);
+  return `<img class="ref" src="${ph.src}" alt="${d.name} cloud" loading="lazy" data-slug="${d.slug}" data-vb="${vb}" onerror="photoFallback(this)">`;
+}
+function photoFallback(img){img.outerHTML=artSVG(byslug[img.dataset.slug],img.dataset.vb);}
 function cardPortrait(d){
   const caps=captures[d.slug]||[];
   if(caps.length){
